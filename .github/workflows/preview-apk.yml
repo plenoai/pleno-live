@@ -35,14 +35,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Cache Expo prebuild output
-        uses: actions/cache@v4
-        with:
-          path: android
-          key: expo-prebuild-${{ hashFiles('package.json', 'app.json', 'app.config.*', 'pnpm-lock.yaml') }}
-
       - name: Expo prebuild
-        run: npx expo prebuild --platform android
+        run: npx expo prebuild --platform android --clean
 
       - name: Configure Android build
         run: |
