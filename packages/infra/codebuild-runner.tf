@@ -78,6 +78,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "codebuild_cache" {
     expiration {
       days = 7
     }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
   }
 }
 
@@ -97,18 +100,6 @@ resource "aws_codebuild_project" "runner" {
 
     # Runner projectはbuildspecをGitHub Actionsが制御するため空
     buildspec = ""
-  }
-
-  # GitHub Actionsのjob queueイベントでトリガー
-  webhook {
-    build_type = "RUNNER"
-
-    filter_group {
-      filter {
-        type    = "EVENT"
-        pattern = "WORKFLOW_JOB_QUEUED"
-      }
-    }
   }
 
   environment {
@@ -141,9 +132,15 @@ resource "aws_codebuild_project" "runner" {
   depends_on = [aws_codebuild_source_credential.github]
 }
 
+# Webhook はTerraform AWS providerが未対応のためAWS CLIで作成:
+# aws codebuild create-webhook \
+#   --project-name pleno-live-runner \
+#   --build-type RUNNER \
+#   --filter-groups "[[{\"type\":\"EVENT\",\"pattern\":\"WORKFLOW_JOB_QUEUED\"}]]"
+
 output "runner_project_name" {
   value       = aws_codebuild_project.runner.name
-  description = "GitHub ActionsのworkflowでのRUNS_ON値: codebuild-{this_value}-${{ github.run_id }}-${{ github.run_attempt }}"
+  description = "GitHub ActionsのworkflowでのRUNS_ON値: codebuild-{this_value}-GITHUB_RUN_ID-GITHUB_RUN_ATTEMPT"
 }
 
 output "cache_bucket" {
