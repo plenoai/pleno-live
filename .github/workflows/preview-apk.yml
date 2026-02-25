@@ -39,7 +39,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: android
-          key: expo-prebuild-${{ hashFiles('package.json', 'app.json', 'app.config.*') }}
+          key: expo-prebuild-${{ hashFiles('package.json', 'app.json', 'app.config.*', 'pnpm-lock.yaml') }}
 
       - name: Expo prebuild
         run: npx expo prebuild --platform android
