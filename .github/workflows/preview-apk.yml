@@ -44,15 +44,16 @@ jobs:
 
       - name: Configure Android build
         run: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          # ANDROID_SDK_ROOT はrunner環境によって異なるためフォールバック付きで設定
+          SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "sdk.dir=$SDK_DIR" > android/local.properties
           # arm64-v8aのみ・R8 minify有効・gif/webp無効でサイズ最小化
+          # configuration-cache はReact Nativeのnodeプロセス呼び出しと非互換のため無効
           cat >> android/gradle.properties << 'EOF'
           reactNativeArchitectures=arm64-v8a
           android.enableMinifyInReleaseBuilds=true
           expo.gif.enabled=false
           expo.webp.enabled=false
-          org.gradle.configuration-cache=true
-          org.gradle.configuration-cache.problems=warn
           EOF
 
       - uses: gradle/actions/setup-gradle@v4
