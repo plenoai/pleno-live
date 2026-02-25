@@ -30,6 +30,8 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - uses: android-actions/setup-android@v3
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -44,13 +46,7 @@ jobs:
 
       - name: Configure Android build
         run: |
-          # SDK パスを環境変数→findの順で解決（CodeBuild/GitHub Actions両対応）
-          SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-          if [ -z "$SDK_DIR" ]; then
-            SDK_DIR=$(find /usr /opt /root /home -maxdepth 6 -name "adb" 2>/dev/null | head -1 | sed 's|/platform-tools/adb||')
-          fi
-          echo "SDK_DIR resolved: $SDK_DIR"
-          echo "sdk.dir=$SDK_DIR" > android/local.properties
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
           # arm64-v8aのみ・R8 minify有効・gif/webp無効でサイズ最小化
           # configuration-cache はReact Nativeのnodeプロセス呼び出しと非互換のため無効
           cat >> android/gradle.properties << 'EOF'
