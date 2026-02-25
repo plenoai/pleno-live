@@ -41,16 +41,6 @@ jobs:
       - name: Expo prebuild
         run: npx expo prebuild --platform android
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            android/.gradle
-          key: gradle-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/build.gradle', 'android/app/build.gradle') }}
-          restore-keys: gradle-
-
       - name: Configure Android build
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
@@ -60,7 +50,13 @@ jobs:
           android.enableMinifyInReleaseBuilds=true
           expo.gif.enabled=false
           expo.webp.enabled=false
+          org.gradle.configuration-cache=true
+          org.gradle.configuration-cache.problems=warn
           EOF
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
 
       - name: Build release APK
         env:
@@ -68,7 +64,6 @@ jobs:
         run: |
           cd android
           ./gradlew assembleRelease \
-            --no-daemon \
             --build-cache \
             --parallel \
             -x lint \
