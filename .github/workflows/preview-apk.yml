@@ -63,12 +63,16 @@ jobs:
           EOF
 
       - name: Build release APK
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g"
         run: |
           cd android
           ./gradlew assembleRelease \
             --no-daemon \
             --build-cache \
-            --parallel
+            --parallel \
+            -x lint \
+            -x lintRelease
 
       - name: Get metadata
         id: meta
