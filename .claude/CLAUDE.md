@@ -29,48 +29,30 @@ packages/          # 共有ライブラリ
 - tRPC 11 + Express
 - ElevenLabs STT, Gemini AI
 
-# Publish Guide
+# CI / Build Flow
 
-`/release` スキルを使用してリリースを実行します。
+## 環境変数管理
 
-## 概要
-- EAS Cloudは明示されない限り使用しない
-- ローカルでAPKビルドし `gh release` で公開
-- ダウンロードQR画像を生成しREADMEを更新
-
-## Android SDK
-```bash
-# Homebrew SDK パス
-sdk.dir=/opt/homebrew/share/android-commandlinetools
+`eas.json` を単一ソースとして管理し、CI は `jq` で読み取る:
+```yaml
+- name: Load env from eas.json
+  run: jq -r '.build.PROFILE.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> $GITHUB_ENV
 ```
-
-## ビルドコマンド
-```bash
-npx expo prebuild --platform android --clean
-cd android && ./gradlew assembleRelease
-# 出力: android/app/build/outputs/apk/release/app-release.apk
-```
-
-# CI / Preview Build
+- `preview` プロファイル → `preview-apk.yml`
+- `production` プロファイル → `release.yml`
 
 ## Preview APK (`.github/workflows/preview-apk.yml`)
 
 - **トリガー**: `canary`ブランチへのpush、または `workflow_dispatch`
-- **ランナー**: `ubuntu-latest`（Android SDK焼き込み済みAMI、約6分で完了）
+- **ランナー**: `ubuntu-latest`（約6分で完了）
 - **最適化**: `arm64-v8a`のみビルド・R8 minify有効・lint無効・Gradleキャッシュ
 - **成果物**: GitHub Releases に `preview-{SHORT_SHA}` タグでprerelease作成
 - **固定URL**: `https://github.com/HikaruEgashira/pleno-live/releases/latest/download/pleno-live-latest.apk`
 - **古いリリース自動削除**: 最新5件を残してクリーンアップ
 
-## Runner Image (`.github/workflows/build-runner-image.yml`)
+## Release APK (`.github/workflows/release.yml`)
 
-- **トリガー**: `packages/infra/runner.Dockerfile` 変更時
-- **内容**: Ubuntu 22.04 + Android SDK 34 のカスタムイメージをECRにプッシュ
-- **認証**: GitHub OIDC → AWS IAM Role `pleno-live-github-actions`（アクセスキー不要）
-- **用途**: CodeBuild Runner用（現在は未使用。ubuntu-latestの方が高速なため）
-
-## AWS CodeBuild Runner（待機中）
-
-`packages/infra/codebuild-runner.tf` でTerraform管理。
-現在は **ubuntu-latestの方が速い（6m vs 15m）** ため無効。
-ビルドが大型化して並列処理やメモリ増強が必要になった場合に活用を検討する。
+- **トリガー**: `main`ブランチへのpush（website変更除く）
+- **ランナー**: `ubuntu-latest`
+- **成果物**: GitHub Releases に `v{VERSION}-{SHORT_SHA}` タグで正式リリース作成・APK添付
+- **古いリリース自動削除**: 最新10件を残してクリーンアップ
