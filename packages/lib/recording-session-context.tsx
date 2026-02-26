@@ -253,7 +253,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       setMeteringHistory([]);
       setFullMeteringHistory([]);
 
-      const recordingId = Date.now().toString();
+      const recordingId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       setCurrentRecordingId(recordingId);
 
       // 自動保存を開始
