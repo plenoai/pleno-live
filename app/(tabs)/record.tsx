@@ -7,11 +7,9 @@ import {
   Animated,
   ScrollView,
   Platform,
-  Modal,
 } from "react-native";
 import { useKeepAwake } from "expo-keep-awake";
 import { SystemAudioStream, AudioSource } from "@/packages/lib/system-audio-stream";
-import type { RecordingDraft } from "@/packages/types/recording";
 
 import { ScreenContainer } from "@/packages/components/screen-container";
 import { IconSymbol } from "@/packages/components/ui/icon-symbol";
@@ -60,12 +58,7 @@ export default function RecordScreen() {
     getTranslationStatus,
     isTranslating,
     startRecording,
-    checkForRecovery,
-    clearRecoveryDraft,
   } = useRecordingSession();
-
-  const [recoveryDraft, setRecoveryDraft] = useState<RecordingDraft | null>(null);
-  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
 
   const {
     isRecording,
@@ -79,24 +72,6 @@ export default function RecordScreen() {
   // Keep screen awake during recording
   useKeepAwake();
 
-  // Check for recovery draft on mount
-  useEffect(() => {
-    const checkDraft = async () => {
-      const draft = await checkForRecovery();
-      if (draft) {
-        setRecoveryDraft(draft);
-        setShowRecoveryModal(true);
-      }
-    };
-    checkDraft();
-  }, [checkForRecovery]);
-
-  const handleRecoveryDismiss = async () => {
-    await clearRecoveryDraft();
-    setShowRecoveryModal(false);
-    setRecoveryDraft(null);
-  };
-
   // Auto-scroll realtime transcript
   useEffect(() => {
     if (realtimeState.segments.length > 0 && scrollViewRef.current) {
@@ -104,49 +79,8 @@ export default function RecordScreen() {
     }
   }, [realtimeState.segments]);
 
-  const formatDraftTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}分${secs}秒`;
-  };
-
   return (
     <ScreenContainer>
-      {/* Recovery Draft Modal */}
-      <Modal
-        visible={showRecoveryModal}
-        transparent
-        animationType="fade"
-        onRequestClose={handleRecoveryDismiss}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <IconSymbol name="exclamationmark.triangle.fill" size={48} color={colors.warning} />
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-              未保存の録音があります
-            </Text>
-            {recoveryDraft && (
-              <Text style={[styles.modalDescription, { color: colors.muted }]}>
-                録音時間: {formatDraftTime(recoveryDraft.duration)}{'\n'}
-                {recoveryDraft.highlights.length > 0 && `ハイライト: ${recoveryDraft.highlights.length}件\n`}
-                最終保存: {new Date(recoveryDraft.lastSavedAt).toLocaleString('ja-JP')}
-              </Text>
-            )}
-            <Text style={[styles.modalNote, { color: colors.muted }]}>
-              音声データは復元できませんが、録音情報は保存されています。
-            </Text>
-            <Button
-              onPress={handleRecoveryDismiss}
-              variant="primary"
-              size="lg"
-              fullWidth
-            >
-              確認して閉じる
-            </Button>
-          </View>
-        </View>
-      </Modal>
-
       <View style={[styles.container, isDesktop && styles.containerDesktop]}>
         {/* Header */}
         <View style={styles.header}>
@@ -569,43 +503,5 @@ const styles = StyleSheet.create({
   },
   translationError: {
     fontSize: 12,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    borderRadius: 12,
-    padding: 24,
-    alignItems: "center",
-    maxWidth: 320,
-    width: "100%",
-    gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 16,
-    textAlign: "center",
-  },
-  modalDescription: {
-    fontSize: 14,
-    marginTop: 12,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  modalNote: {
-    fontSize: 12,
-    marginTop: 8,
-    textAlign: "center",
-    fontStyle: "italic",
   },
 });
