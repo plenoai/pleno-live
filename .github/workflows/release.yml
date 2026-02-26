@@ -42,8 +42,10 @@ jobs:
         run: pnpm check
 
       - name: Load env from eas.json
+        env:
+          APP_HMAC_SECRET: ${{ secrets.APP_HMAC_SECRET }}
         run: |
-          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("\n"; "") | gsub("\r"; ""))"' eas.json >> $GITHUB_ENV
+          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("\n"; "") | gsub("\r"; ""))"' eas.json | envsubst >> $GITHUB_ENV
 
       - name: Expo prebuild
         run: npx expo prebuild --platform android --clean
