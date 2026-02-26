@@ -38,9 +38,12 @@ gh pr merge --squash --delete-branch
 mainへのマージ後、`release.yml`が自動トリガーされる。
 
 ```bash
-# CIの実行状況を確認
-gh run list --limit 3
+# CIの実行状況を確認・完了まで待機
+gh run list --workflow=release.yml --limit 3
 gh run watch <run-id>
+
+# 完了後、APKのURLを出力
+gh release view --json tagName,assets --jq '"APK: " + .assets[0].url'
 ```
 
 CIが実行する内容:
