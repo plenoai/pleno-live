@@ -104,6 +104,7 @@ export class RealtimeTranscriptionClient {
             this.handleMessage(message);
           } catch (error) {
             console.error("[RealtimeClient] Failed to parse message:", error);
+            this.emit("error", { message: "サーバーから不正なメッセージを受信しました" });
           }
         };
 

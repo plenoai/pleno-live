@@ -148,6 +148,13 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
     };
   }, [isRecording, isPaused, realtimeEnabled, realtimeSoundLevel]);
 
+  // 翻訳先言語が変わったらキャッシュをクリア
+  useEffect(() => {
+    if (translationEnabled) {
+      clearTranslationCache();
+    }
+  }, [translationTargetLanguage, translationEnabled, clearTranslationCache]);
+
   // Timer for duration
   useEffect(() => {
     if (isRecording && !isPaused) {
