@@ -71,6 +71,11 @@ export const appRouter = router({
 
           // If base64 audio is provided, use it directly
           if (input.audioBase64) {
+            // base64はバイナリの約1.37倍サイズになるため、100MBバイナリ相当で制限
+            const MAX_BASE64_LENGTH = 100 * 1024 * 1024 * 1.37;
+            if (input.audioBase64.length > MAX_BASE64_LENGTH) {
+              throw new Error("音声ファイルが大きすぎます（上限100MB）");
+            }
             const audioBuffer = Buffer.from(input.audioBase64, "base64");
             result = await transcribeAudio(audioBuffer, input.filename, options);
           }
@@ -389,7 +394,12 @@ JSON形式で以下のように出力してください:
             : String(content);
           const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
           const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          const parsed = JSON.parse(jsonStr);
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(jsonStr);
+          } catch {
+            throw new Error(`LLMが不正なJSONを返しました: ${jsonStr.slice(0, 100)}`);
+          }
 
           // Validate and format response
           const tags = Array.isArray(parsed)
@@ -470,7 +480,12 @@ JSON形式で以下のように出力してください:
             : String(content);
           const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
           const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          const parsed = JSON.parse(jsonStr);
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(jsonStr);
+          } catch {
+            throw new Error(`LLMが不正なJSONを返しました: ${jsonStr.slice(0, 100)}`);
+          }
 
           // Validate and format response
           const items = Array.isArray(parsed)
@@ -563,7 +578,16 @@ JSON形式で以下のように出力してください:
             : String(content);
           const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
           const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          const parsed = JSON.parse(jsonStr);
+          let parsed: Record<string, unknown>;
+          try {
+            const raw = JSON.parse(jsonStr);
+            if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+              throw new Error("オブジェクト形式ではありません");
+            }
+            parsed = raw as Record<string, unknown>;
+          } catch {
+            throw new Error(`LLMが不正なJSONを返しました: ${jsonStr.slice(0, 100)}`);
+          }
 
           // Validate and format response
           const score = Math.min(1, Math.max(-1, Number(parsed.score) || 0));
