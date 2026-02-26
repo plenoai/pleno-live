@@ -50,3 +50,27 @@ npx expo prebuild --platform android --clean
 cd android && ./gradlew assembleRelease
 # 出力: android/app/build/outputs/apk/release/app-release.apk
 ```
+
+# CI / Preview Build
+
+## Preview APK (`.github/workflows/preview-apk.yml`)
+
+- **トリガー**: `canary`ブランチへのpush、または `workflow_dispatch`
+- **ランナー**: `ubuntu-latest`（Android SDK焼き込み済みAMI、約6分で完了）
+- **最適化**: `arm64-v8a`のみビルド・R8 minify有効・lint無効・Gradleキャッシュ
+- **成果物**: GitHub Releases に `preview-{SHORT_SHA}` タグでprerelease作成
+- **固定URL**: `https://github.com/HikaruEgashira/pleno-live/releases/latest/download/pleno-live-latest.apk`
+- **古いリリース自動削除**: 最新5件を残してクリーンアップ
+
+## Runner Image (`.github/workflows/build-runner-image.yml`)
+
+- **トリガー**: `packages/infra/runner.Dockerfile` 変更時
+- **内容**: Ubuntu 22.04 + Android SDK 34 のカスタムイメージをECRにプッシュ
+- **認証**: GitHub OIDC → AWS IAM Role `pleno-live-github-actions`（アクセスキー不要）
+- **用途**: CodeBuild Runner用（現在は未使用。ubuntu-latestの方が高速なため）
+
+## AWS CodeBuild Runner（待機中）
+
+`packages/infra/codebuild-runner.tf` でTerraform管理。
+現在は **ubuntu-latestの方が速い（6m vs 15m）** ため無効。
+ビルドが大型化して並列処理やメモリ増強が必要になった場合に活用を検討する。
