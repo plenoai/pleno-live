@@ -56,14 +56,19 @@ resource "aws_iam_role_policy" "codebuild_runner" {
         Resource = "${aws_s3_bucket.codebuild_cache.arn}/*"
       },
       {
-        # ECRからカスタムrunnerイメージをプル
+        # ECRからカスタムrunnerイメージをプル（リポジトリスコープ）
         Effect = "Allow"
         Action = [
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
-          "ecr:GetAuthorizationToken",
           "ecr:BatchCheckLayerAvailability"
         ]
+        Resource = aws_ecr_repository.runner.arn
+      },
+      {
+        # GetAuthorizationTokenはリソースレベルの制限不可
+        Effect   = "Allow"
+        Action   = "ecr:GetAuthorizationToken"
         Resource = "*"
       }
     ]

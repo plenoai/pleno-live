@@ -18,7 +18,7 @@ RUN mkdir -p ${ANDROID_SDK_ROOT}/cmdline-tools && \
     rm -rf /tmp/cmdline-tools.zip /tmp/cmdline-tools
 
 # Android SDK コンポーネントのインストール（ライセンス自動承諾）
-RUN yes | sdkmanager --licenses > /dev/null 2>&1 && \
+RUN yes | sdkmanager --licenses > /dev/null && \
     sdkmanager \
       "platform-tools" \
       "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" \
