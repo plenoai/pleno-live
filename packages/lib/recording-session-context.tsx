@@ -159,6 +159,12 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
     };
   }, [isRecording, isPaused, realtimeEnabled, realtimeSoundLevel]);
 
+  // auto-save用refを最新ステートと同期
+  useEffect(() => { durationRef.current = duration; }, [duration]);
+  useEffect(() => { highlightsRef.current = highlights; }, [highlights]);
+  useEffect(() => { fullMeteringHistoryRef.current = fullMeteringHistory; }, [fullMeteringHistory]);
+  useEffect(() => { realtimeSegmentsRef.current = realtimeState.segments; }, [realtimeState.segments]);
+
   // 翻訳先言語が変わったらキャッシュをクリア
   useEffect(() => {
     if (translationEnabled) {
@@ -240,7 +246,6 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
 
   const startRecording = useCallback(async (audioSource: AudioSource = 'microphone') => {
     if (isStartingRef.current || isRecording) {
-      console.log('Recording already in progress or starting, skipping');
       return;
     }
     isStartingRef.current = true;
@@ -284,23 +289,12 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
         meteringHistory: fullMeteringHistoryRef.current,
       }));
 
-      console.log('[RecordingSession] Starting recording with settings:', {
-        realtimeEnabled,
-        translationEnabled,
-        translationTargetLanguage,
-        audioSource,
-        useSystemAudio,
-      });
-
       if (realtimeEnabled) {
         try {
           if (translationEnabled) {
-            console.log('[RecordingSession] Clearing translation cache');
             clearTranslationCache();
           }
-          console.log('[RecordingSession] Starting realtime session with translation:', translationEnabled);
 
-          // システム音声の場合はsendAudioChunkを使用するため、内部マイクをスキップ
           await startRealtimeSession(recordingId, {
             skipAudioStreaming: useSystemAudio,
           }, {
@@ -308,19 +302,14 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
             onCommitted: translationEnabled ? translateCommitted : undefined,
           });
 
-          // システム音声の場合はSystemAudioStreamを開始
           if (useSystemAudio) {
-            console.log('[RecordingSession] Starting SystemAudioStream for:', audioSource);
             const systemStream = new SystemAudioStream();
             systemAudioStreamRef.current = systemStream;
 
             await systemStream.start(audioSource, (base64Audio) => {
               sendAudioChunk(base64Audio, 16000);
             });
-            console.log('[RecordingSession] SystemAudioStream started');
           }
-
-          console.log('Realtime transcription session started');
         } catch (error) {
           console.error('Failed to start realtime session:', error);
           // SystemAudioStreamが開始されていた場合はクリーンアップ
@@ -365,9 +354,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
     // 自動保存を停止
     stopAutoSave();
 
-    // SystemAudioStreamを停止
     if (systemAudioStreamRef.current) {
-      console.log('[RecordingSession] Stopping SystemAudioStream');
       systemAudioStreamRef.current.stop();
       systemAudioStreamRef.current = null;
     }
@@ -376,7 +363,6 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       if (realtimeEnabled && currentRecordingId) {
         try {
           await stopRealtimeSession();
-          console.log('Realtime transcription session stopped');
         } catch (error) {
           console.error('Failed to stop realtime session:', error);
         }
@@ -392,18 +378,13 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
         return;
       }
 
-      console.log('Recording stopped, URI:', uri);
-
       let finalUri = uri;
 
-      // Blob URL の場合は Base64 に変換（Web）
       if (uri.startsWith('blob:')) {
-        console.log('Converting blob to base64 for storage');
         try {
           const response = await fetch(uri);
           const blob = await response.blob();
           const base64Data = await FileSystem.blobToBase64(blob);
-          console.log('Base64 conversion completed, length:', base64Data.length);
           finalUri = `data:audio/webm;base64,${base64Data}`;
         } catch (webError) {
           console.error('Failed to convert blob to base64:', webError);
@@ -458,14 +439,11 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
         waveformData: normalizeWaveform(fullMeteringHistory),
       };
 
-      console.log('Adding recording:', newRecording.id);
       await addRecording(newRecording);
-      console.log('Recording added successfully');
 
       if (realtimeEnabled && realtimeState.segments.length > 0) {
         const realtimeText = consolidateSegments();
         if (realtimeText.trim()) {
-          console.log('Saving realtime transcription result:', realtimeText.substring(0, 100));
 
           const transcriptSegments = realtimeState.segments
             .filter((s) => !s.isPartial)
@@ -487,7 +465,6 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
                 targetLanguage: translationTargetLanguage,
                 text: translatedTexts.join('\n'),
               };
-              console.log('Saving translation result:', translationData.text.substring(0, 100));
             }
           }
 
@@ -524,9 +501,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
     // 自動保存を停止
     stopAutoSave();
 
-    // SystemAudioStreamを停止
     if (systemAudioStreamRef.current) {
-      console.log('[RecordingSession] Stopping SystemAudioStream (cancel)');
       systemAudioStreamRef.current.stop();
       systemAudioStreamRef.current = null;
     }

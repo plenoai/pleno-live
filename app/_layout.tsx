@@ -58,13 +58,10 @@ export const unstable_settings = {
   anchor: "(tabs)",
 };
 
-export default function RootLayout() {
-  // Storybook有効時はStorybookを表示
-  if (STORYBOOK_ENABLED) {
-    const StorybookUI = require("../.rnstorybook").default;
-    return <StorybookUI />;
-  }
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const StorybookUI = STORYBOOK_ENABLED ? require("../.rnstorybook").default : null;
 
+function AppLayout() {
   // ウェブでもAppProvidersを常に使用（tRPCコンテキストが必要なため）
   const isWebLanding = false;
 
@@ -155,3 +152,5 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+export default StorybookUI ?? AppLayout;

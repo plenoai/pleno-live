@@ -146,15 +146,11 @@ export function RecordingsProvider({ children }: { children: React.ReactNode }) 
   }, [state.recordings, state.isLoading]);
 
   const loadRecordings = async () => {
-    const startTime = Date.now();
     try {
       const stored = await Storage.getItem(STORAGE_KEY);
       if (stored) {
-        // パフォーマンス最適化: JSON.parseを先に実行し、日付変換は遅延実行
         const parsed = JSON.parse(stored);
-        console.log(`Loaded ${parsed.length} recordings from storage in ${Date.now() - startTime}ms`);
 
-        // 日付変換を最適化（必要な時のみ変換されるgetterを使用）
         const recordings = parsed.map((r: Recording) => {
           // 日付文字列をそのまま保持し、必要時に変換
           const createdAtStr = r.createdAt;
@@ -190,7 +186,6 @@ export function RecordingsProvider({ children }: { children: React.ReactNode }) 
           };
         });
 
-        console.log(`Processed recordings in ${Date.now() - startTime}ms total`);
         dispatch({ type: 'SET_RECORDINGS', payload: recordings });
       } else {
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -202,14 +197,16 @@ export function RecordingsProvider({ children }: { children: React.ReactNode }) 
   };
 
   const saveRecordings = async (recordings: Recording[]) => {
-    // realtimeTranscriptは一時データなので保存から除外
-    const recordingsToSave = recordings.map(({ realtimeTranscript, ...rest }) => rest);
-    const data = JSON.stringify(recordingsToSave);
-    const sizeKB = Math.round(data.length / 1024);
-    console.log(`Saving recordings to Storage: ${recordings.length} items, ${sizeKB}KB`);
-
-    await Storage.setItem(STORAGE_KEY, data);
-    console.log('Recordings saved successfully');
+    try {
+      // realtimeTranscriptは一時データなので保存から除外
+      const recordingsToSave = recordings.map(({ realtimeTranscript, ...rest }) => rest);
+      await Storage.setItem(STORAGE_KEY, JSON.stringify(recordingsToSave));
+    } catch (error) {
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        console.warn('Storage quota exceeded. Consider cleaning up old recordings.');
+      }
+      console.error('Failed to save recordings:', error);
+    }
   };
 
   const addRecording = useCallback(async (recording: Recording) => {

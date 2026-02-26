@@ -604,13 +604,16 @@ JSON形式で以下のように出力してください:
           }
 
           // Normalize emotion scores to 0-1
+          const emotionsData = typeof parsed.emotions === 'object' && parsed.emotions !== null
+            ? parsed.emotions as Record<string, unknown>
+            : {};
           const emotions = {
-            joy: Math.min(1, Math.max(0, Number(parsed.emotions?.joy) || 0)),
-            sadness: Math.min(1, Math.max(0, Number(parsed.emotions?.sadness) || 0)),
-            anger: Math.min(1, Math.max(0, Number(parsed.emotions?.anger) || 0)),
-            fear: Math.min(1, Math.max(0, Number(parsed.emotions?.fear) || 0)),
-            surprise: Math.min(1, Math.max(0, Number(parsed.emotions?.surprise) || 0)),
-            disgust: Math.min(1, Math.max(0, Number(parsed.emotions?.disgust) || 0)),
+            joy: Math.min(1, Math.max(0, Number(emotionsData.joy) || 0)),
+            sadness: Math.min(1, Math.max(0, Number(emotionsData.sadness) || 0)),
+            anger: Math.min(1, Math.max(0, Number(emotionsData.anger) || 0)),
+            fear: Math.min(1, Math.max(0, Number(emotionsData.fear) || 0)),
+            surprise: Math.min(1, Math.max(0, Number(emotionsData.surprise) || 0)),
+            disgust: Math.min(1, Math.max(0, Number(emotionsData.disgust) || 0)),
           };
 
           return {

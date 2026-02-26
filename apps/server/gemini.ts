@@ -54,8 +54,6 @@ export async function transcribeAudioWithGemini(
     },
   };
 
-  console.log("[Gemini] Transcribing audio with mime type:", mimeType);
-
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
     {
@@ -75,7 +73,6 @@ export async function transcribeAudioWithGemini(
   }
 
   const result = await response.json();
-  console.log("[Gemini] Transcription response received");
 
   // Extract text from response
   const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "";

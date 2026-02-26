@@ -18,11 +18,9 @@ import { IconSymbol } from "@/packages/components/ui/icon-symbol";
 import { useRecordings } from "@/packages/lib/recordings-context";
 import { useColors } from "@/packages/hooks/use-colors";
 import { useThemeContext } from "@/packages/lib/theme-provider";
-import { useTranslation } from "@/packages/lib/i18n/context";
 import { trpc } from "@/packages/lib/trpc";
 import { useWhisperModel } from "@/packages/hooks/use-whisper-model";
 import { useSettings, type Language, type TranscriptionProvider } from "@/packages/lib/settings-context";
-import type { WhisperModelSize } from "@/packages/lib/whisper/whisper-types";
 
 type SummaryTemplate = "general" | "meeting" | "interview" | "lecture" | string;
 
@@ -57,14 +55,12 @@ const TRANSLATION_LANGUAGES: { value: string; label: string }[] = [
   { value: "en", label: "English (英語)" },
 ];
 
-const SETTINGS_KEY = "app-settings";
 const CUSTOM_TEMPLATES_KEY = "custom-templates";
 
 export default function SettingsScreen() {
   const colors = useColors();
   const { state: recordingsState, addRecording } = useRecordings();
   const { colorScheme, setColorScheme } = useThemeContext();
-  const { t } = useTranslation();
   const { settings, updateSettings, updateNestedSettings } = useSettings();
 
   const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
@@ -290,7 +286,6 @@ export default function SettingsScreen() {
     const recordings = recordingsState.recordings;
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // 今週の録音
     const thisWeekRecordings = recordings.filter((r) => new Date(r.createdAt) >= weekAgo);
