@@ -1,11 +1,11 @@
 ---
 name: release
-description: バージョンバンプPRを作成し、CIでAPKビルド＋GitHubリリースを自動作成する
+description: バージョンバンプをmainに直接pushし、CIでAPKビルド＋GitHubリリースを自動作成する
 ---
 
 # Release Skill
 
-バージョンをバンプするPRをmainにマージすることで、GitHub Actions（`.github/workflows/release.yml`）がAPKビルドとリリース作成を自動実行します。
+バージョンをバンプしてmainにpushすることで、GitHub Actions（`.github/workflows/release.yml`）がAPKビルドとリリース作成を自動実行します。
 
 ## 手順
 
@@ -20,22 +20,19 @@ gh release list --limit 5
 npm version <new-version> --no-git-tag-version
 ```
 
-### 2. PRを作成してマージ
+### 2. コミットしてmainにpush
 
 ```bash
 VERSION=$(node -p "require('./package.json').version")
 
-git checkout -b release/v${VERSION}
 git add package.json
 git commit -m "chore: bump version to ${VERSION}"
-git push -u origin release/v${VERSION}
-gh pr create --title "chore: bump version to ${VERSION}" --body "Release preparation"
-gh pr merge --squash --delete-branch
+git push origin main
 ```
 
 ### 3. CIの確認
 
-mainへのマージ後、`release.yml`が自動トリガーされる。
+pushすると`release.yml`が自動トリガーされる。
 
 ```bash
 # CIの実行状況を確認・完了まで待機
@@ -56,5 +53,5 @@ CIが実行する内容:
 ## 注意事項
 
 - ローカルでAPKビルドは行わない（CIに任せる）
-- mainブランチは保護されているため、PRでマージする
+- Trunk-based development: mainに直接pushする
 - EAS Cloudは明示されない限り使用しない
