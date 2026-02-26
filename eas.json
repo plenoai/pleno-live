@@ -16,7 +16,8 @@
       "extends": "base",
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://live.plenoai.com"
+        "EXPO_PUBLIC_API_URL": "https://live.plenoai.com",
+        "EXPO_PUBLIC_APP_HMAC_SECRET": "${APP_HMAC_SECRET}"
       },
       "android": {
         "buildType": "apk"
@@ -25,7 +26,8 @@
     "production": {
       "extends": "base",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://live.plenoai.com"
+        "EXPO_PUBLIC_API_URL": "https://live.plenoai.com",
+        "EXPO_PUBLIC_APP_HMAC_SECRET": "${APP_HMAC_SECRET}"
       }
     }
   },

@@ -25,3 +25,4 @@ export type { AudioStreamConfig, AudioStreamController } from './audio-stream';
 
 export { BackgroundTask } from './background-task';
 export type { PlatformBackgroundTask } from './background-task';
+

@@ -16,11 +16,12 @@ import {
 } from "react-native-safe-area-context";
 import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
-import { trpc, createTRPCClient } from "@/packages/lib/trpc";
+import { trpc, createTRPCClient, createVanillaTRPCClient } from "@/packages/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/packages/lib/_core/manus-runtime";
 import { RecordingsProvider } from "@/packages/lib/recordings-context";
 import { LanguageProvider } from "@/packages/lib/i18n/context";
 import { SettingsProvider } from "@/packages/lib/settings-context";
+import { initializeAuth, setTRPCClient } from "@/packages/lib/auth";
 
 const STORYBOOK_ENABLED = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
 
@@ -37,6 +38,16 @@ function AppProviders({ children }: { children: React.ReactNode }) {
       }),
   );
   const [trpcClient] = useState(() => createTRPCClient());
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    const vanillaClient = createVanillaTRPCClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setTRPCClient(vanillaClient as any);
+    initializeAuth().finally(() => setAuthReady(true));
+  }, []);
+
+  if (!authReady) return null;
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>

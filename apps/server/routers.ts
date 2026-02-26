@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { signSessionToken } from "./_core/auth";
+import { createChallenge, verifyClientResponse } from "./attestation";
 import { invokeLLM, type Message } from "./_core/llm";
 import {
   transcribeAudio,
@@ -11,12 +13,43 @@ import {
 import { transcribeAudioWithGemini } from "./gemini";
 import { generateRealtimeToken } from "./elevenlabs-realtime";
 
+const authRouter = router({
+  createChallenge: publicProcedure.mutation(async () => {
+    const { nonce, challengeToken } = await createChallenge();
+    return { nonce, challengeToken };
+  }),
+
+  verifyAttestation: publicProcedure
+    .input(z.object({
+      responseToken: z.string(),
+      challengeToken: z.string(),
+      platform: z.string(),
+      deviceId: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const result = await verifyClientResponse(input.challengeToken, input.responseToken);
+      if (!result.ok) {
+        return { success: false as const, error: result.error, sessionToken: null, expiresAt: 0 };
+      }
+
+      const sessionToken = await signSessionToken({
+        deviceId: input.deviceId,
+        platform: input.platform,
+      });
+
+      const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
+
+      return { success: true as const, sessionToken, expiresAt };
+    }),
+});
+
 export const appRouter = router({
   system: systemRouter,
+  auth: authRouter,
 
   ai: router({
     // Transcription endpoint supporting both ElevenLabs and Gemini
-    transcribe: publicProcedure
+    transcribe: protectedProcedure
       .input(z.object({
         audioUrl: z.string().optional(),
         audioBase64: z.string().optional(),
@@ -114,7 +147,7 @@ export const appRouter = router({
       }),
 
     // Chat/Summary endpoint
-    chat: publicProcedure
+    chat: protectedProcedure
       .input(z.object({
         message: z.string(),
         context: z.string().optional(),
@@ -151,7 +184,7 @@ export const appRouter = router({
       }),
 
     // Summary endpoint
-    summarize: publicProcedure
+    summarize: protectedProcedure
       .input(z.object({
         text: z.string(),
         template: z.enum(["general", "meeting", "interview", "lecture"]).default("general"),
@@ -200,7 +233,7 @@ export const appRouter = router({
       }),
 
     // Q&A endpoint
-    askQuestion: publicProcedure
+    askQuestion: protectedProcedure
       .input(z.object({
         question: z.string(),
         transcriptText: z.string(),
@@ -247,7 +280,7 @@ ${input.transcriptText}`,
       }),
 
     // Generate realtime transcription token
-    generateRealtimeToken: publicProcedure
+    generateRealtimeToken: protectedProcedure
       .mutation(async () => {
         console.log("[TRPC] Generating realtime token");
         const token = await generateRealtimeToken();
@@ -255,7 +288,7 @@ ${input.transcriptText}`,
       }),
 
     // Realtime translation endpoint
-    translate: publicProcedure
+    translate: protectedProcedure
       .input(z.object({
         texts: z.array(z.object({
           id: z.string(),
@@ -312,7 +345,7 @@ Maintain the original tone and nuance. Do not add any explanation.`,
       }),
 
     // Generate tags from transcript text
-    generateTags: publicProcedure
+    generateTags: protectedProcedure
       .input(z.object({
         text: z.string(),
         maxTags: z.number().default(5),
@@ -382,7 +415,7 @@ JSON形式で以下のように出力してください:
       }),
 
     // Extract action items from transcript text
-    extractActionItems: publicProcedure
+    extractActionItems: protectedProcedure
       .input(z.object({
         text: z.string(),
         maxItems: z.number().default(10),
@@ -464,7 +497,7 @@ JSON形式で以下のように出力してください:
       }),
 
     // Analyze sentiment from transcript text
-    analyzeSentiment: publicProcedure
+    analyzeSentiment: protectedProcedure
       .input(z.object({
         text: z.string(),
       }))
@@ -566,7 +599,7 @@ JSON形式で以下のように出力してください:
       }),
 
     // Extract keywords from transcript text
-    extractKeywords: publicProcedure
+    extractKeywords: protectedProcedure
       .input(z.object({
         text: z.string(),
         maxKeywords: z.number().default(10),
@@ -645,7 +678,7 @@ JSON形式で以下のように出力してください:
       }),
 
     // Export recording to Markdown format
-    exportMarkdown: publicProcedure
+    exportMarkdown: protectedProcedure
       .input(z.object({
         recordingId: z.string(),
         title: z.string(),
@@ -756,7 +789,7 @@ JSON形式で以下のように出力してください:
       }),
 
     // Phase 3 P3: Import recording metadata from CSV or JSON files
-    importRecording: publicProcedure
+    importRecording: protectedProcedure
       .input(z.object({
         format: z.enum(["csv", "json"]),
         data: z.string(), // CSV or JSON string

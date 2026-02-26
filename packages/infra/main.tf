@@ -42,6 +42,16 @@ variable "gemini_api_key" {
   sensitive = true
 }
 
+variable "jwt_secret" {
+  type      = string
+  sensitive = true
+}
+
+variable "app_hmac_secret" {
+  type      = string
+  sensitive = true
+}
+
 locals {
   function_name = "${var.project_name}-${var.environment}"
 }
@@ -89,9 +99,11 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      NODE_ENV           = "production"
-      ELEVENLABS_API_KEY = var.elevenlabs_api_key
-      GEMINI_API_KEY     = var.gemini_api_key
+      NODE_ENV                   = "production"
+      ELEVENLABS_API_KEY         = var.elevenlabs_api_key
+      GEMINI_API_KEY             = var.gemini_api_key
+      JWT_SECRET       = var.jwt_secret
+      APP_HMAC_SECRET  = var.app_hmac_secret
     }
   }
 
