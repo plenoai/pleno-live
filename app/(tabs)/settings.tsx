@@ -80,18 +80,20 @@ export default function SettingsScreen() {
   // Load custom templates on mount
   useEffect(() => {
     const loadCustomTemplates = async () => {
+      const savedTemplates = await Storage.getItem(CUSTOM_TEMPLATES_KEY);
+      if (!savedTemplates) return;
+
+      let templates: CustomTemplate[];
       try {
-        const savedTemplates = await Storage.getItem(CUSTOM_TEMPLATES_KEY);
-        if (savedTemplates) {
-          const templates: CustomTemplate[] = JSON.parse(savedTemplates);
-          setCustomTemplates(templates.map(t => ({
-            ...t,
-            createdAt: new Date(t.createdAt),
-          })));
-        }
-      } catch (error) {
-        console.error("Failed to load custom templates:", error);
+        templates = JSON.parse(savedTemplates);
+      } catch {
+        return; // 壊れたJSONは無視して初期状態を維持
       }
+
+      setCustomTemplates(templates.map(t => ({
+        ...t,
+        createdAt: new Date(t.createdAt),
+      })));
     };
     loadCustomTemplates();
   }, []);
@@ -194,8 +196,7 @@ export default function SettingsScreen() {
             }
             window.alert(`${result.count}件の録音メタデータをインポートしました。`);
           }
-        } catch (error) {
-          console.error("Import error:", error);
+        } catch {
           window.alert("インポートに失敗しました");
         }
       };
@@ -239,8 +240,7 @@ export default function SettingsScreen() {
           }
           Alert.alert("完了", `${importResult.count}件の録音メタデータをインポートしました。`);
         }
-      } catch (error) {
-        console.error("Import error:", error);
+      } catch {
         Alert.alert("エラー", "インポートに失敗しました");
       }
     }
