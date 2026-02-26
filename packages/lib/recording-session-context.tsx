@@ -310,8 +310,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
               sendAudioChunk(base64Audio, 16000);
             });
           }
-        } catch (error) {
-          console.error('Failed to start realtime session:', error);
+        } catch {
           // SystemAudioStreamが開始されていた場合はクリーンアップ
           if (systemAudioStreamRef.current) {
             systemAudioStreamRef.current.stop();
@@ -320,8 +319,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
         }
       }
       isStartingRef.current = false;
-    } catch (error) {
-      console.error('Failed to start recording:', error);
+    } catch {
       isStartingRef.current = false;
       // SystemAudioStreamが開始されていた場合はクリーンアップ
       if (systemAudioStreamRef.current) {
@@ -343,8 +341,8 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
         audioRecorder.pause();
         setIsPaused(true);
       }
-    } catch (error) {
-      console.error('Failed to pause/resume:', error);
+    } catch {
+      // audioRecorder APIの失敗は無視（状態は変更しない）
     }
   }, [audioRecorder, isPaused]);
 
@@ -363,8 +361,8 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       if (realtimeEnabled && currentRecordingId) {
         try {
           await stopRealtimeSession();
-        } catch (error) {
-          console.error('Failed to stop realtime session:', error);
+        } catch {
+          // リアルタイムセッション停止の失敗は録音保存を妨げない
         }
       }
 
@@ -381,15 +379,10 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       let finalUri = uri;
 
       if (uri.startsWith('blob:')) {
-        try {
-          const response = await fetch(uri);
-          const blob = await response.blob();
-          const base64Data = await FileSystem.blobToBase64(blob);
-          finalUri = `data:audio/webm;base64,${base64Data}`;
-        } catch (webError) {
-          console.error('Failed to convert blob to base64:', webError);
-          throw new Error('録音データの変換に失敗しました');
-        }
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const base64Data = await FileSystem.blobToBase64(blob);
+        finalUri = `data:audio/webm;base64,${base64Data}`;
       } else if (FileSystem.documentDirectory) {
         // Native: ファイルを移動
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -488,8 +481,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       await clearDraft();
 
       router.push(`/note/${newRecording.id}`);
-    } catch (error) {
-      console.error('Failed to stop recording:', error);
+    } catch {
       Alert.alert('エラー', '録音の保存に失敗しました');
       isStartingRef.current = false;
     }
@@ -510,13 +502,13 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       if (realtimeEnabled && currentRecordingId) {
         try {
           await stopRealtimeSession();
-        } catch (error) {
-          console.error('Failed to stop realtime session:', error);
+        } catch {
+          // リアルタイムセッション停止の失敗はキャンセル処理を妨げない
         }
       }
 
       await audioRecorder.stop();
-
+    } finally {
       setIsRecording(false);
       setIsPaused(false);
       setDuration(0);
@@ -525,21 +517,6 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       setCurrentRecordingId(null);
       setJustCompleted(true);
       isStartingRef.current = false;
-
-      // ドラフトをクリア（キャンセル）
-      await clearDraft();
-    } catch (error) {
-      console.error('Failed to cancel recording:', error);
-      setIsRecording(false);
-      setIsPaused(false);
-      setDuration(0);
-      setHighlights([]);
-      setFullMeteringHistory([]);
-      setCurrentRecordingId(null);
-      setJustCompleted(true);
-      isStartingRef.current = false;
-
-      // エラー時もドラフトをクリア
       await clearDraft();
     }
   }, [audioRecorder, realtimeEnabled, currentRecordingId, stopRealtimeSession, stopAutoSave, clearDraft]);

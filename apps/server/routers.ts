@@ -124,39 +124,34 @@ export const appRouter = router({
         context: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        try {
-          const messages: Message[] = [
-            {
-              role: "system",
-              content: "あなたは会議や録音の内容を分析する専門家です。ユーザーの質問に対して、提供されたコンテキストに基づいて正確に回答してください。",
-            },
-          ];
+        const messages: Message[] = [
+          {
+            role: "system",
+            content: "あなたは会議や録音の内容を分析する専門家です。ユーザーの質問に対して、提供されたコンテキストに基づいて正確に回答してください。",
+          },
+        ];
 
-          if (input.context) {
-            messages.push({
-              role: "user",
-              content: `コンテキスト:\n${input.context}`,
-            });
-          }
-
+        if (input.context) {
           messages.push({
             role: "user",
-            content: input.message,
+            content: `コンテキスト:\n${input.context}`,
           });
-
-          const result = await invokeLLM({
-            messages,
-            maxTokens: 2000,
-          });
-
-          const content = result.choices[0]?.message?.content;
-          const text = typeof content === "string" ? content : "";
-
-          return { message: text };
-        } catch (error) {
-          console.error("Chat error:", error);
-          throw new Error("AIの応答に失敗しました");
         }
+
+        messages.push({
+          role: "user",
+          content: input.message,
+        });
+
+        const result = await invokeLLM({
+          messages,
+          maxTokens: 2000,
+        });
+
+        const content = result.choices[0]?.message?.content;
+        const text = typeof content === "string" ? content : "";
+
+        return { message: text };
       }),
 
     // Summary endpoint
@@ -177,40 +172,35 @@ export const appRouter = router({
         // Use custom prompt if provided, otherwise use template prompt
         const prompt = input.customPrompt || templatePrompts[input.template];
 
-        try {
-          const result = await invokeLLM({
-            messages: [
-              {
-                role: "system",
-                content: "あなたは文書要約の専門家です。提供されたテキストを構造化された形式で要約してください。",
-              },
-              {
-                role: "user",
-                content: `${prompt}\n\nテキスト:\n${input.text}`,
-              },
-            ],
-            maxTokens: 1500,
-          });
+        const result = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "あなたは文書要約の専門家です。提供されたテキストを構造化された形式で要約してください。",
+            },
+            {
+              role: "user",
+              content: `${prompt}\n\nテキスト:\n${input.text}`,
+            },
+          ],
+          maxTokens: 1500,
+        });
 
-          const content = result.choices[0]?.message?.content;
-          const summaryText = typeof content === "string" ? content : "";
+        const content = result.choices[0]?.message?.content;
+        const summaryText = typeof content === "string" ? content : "";
 
-          // Parse the summary into structured format
-          const lines = summaryText.split("\n").filter(l => l.trim());
-          const overview = lines[0] || "";
-          const keyPoints = lines.slice(1, 4).map(l => l.replace(/^[-•*]\s*/, ""));
-          const actionItems = lines.slice(4, 7).map(l => l.replace(/^[-•*]\s*/, ""));
+        // Parse the summary into structured format
+        const lines = summaryText.split("\n").filter(l => l.trim());
+        const overview = lines[0] || "";
+        const keyPoints = lines.slice(1, 4).map(l => l.replace(/^[-•*]\s*/, ""));
+        const actionItems = lines.slice(4, 7).map(l => l.replace(/^[-•*]\s*/, ""));
 
-          return {
-            overview,
-            keyPoints,
-            actionItems,
-            rawText: summaryText,
-          };
-        } catch (error) {
-          console.error("Summary error:", error);
-          throw new Error("要約の生成に失敗しました");
-        }
+        return {
+          overview,
+          keyPoints,
+          actionItems,
+          rawText: summaryText,
+        };
       }),
 
     // Q&A endpoint
@@ -224,59 +214,48 @@ export const appRouter = router({
         })).optional(),
       }))
       .mutation(async ({ input }) => {
-        try {
-          const messages: Message[] = [
-            {
-              role: "system",
-              content: `あなたは録音内容に関する質問に答えるアシスタントです。以下の文字起こしテキストに基づいて、ユーザーの質問に正確に答えてください。回答は文字起こしの内容に基づいている必要があります。
+        const messages: Message[] = [
+          {
+            role: "system",
+            content: `あなたは録音内容に関する質問に答えるアシスタントです。以下の文字起こしテキストに基づいて、ユーザーの質問に正確に答えてください。回答は文字起こしの内容に基づいている必要があります。
 
 文字起こしテキスト:
 ${input.transcriptText}`,
-            },
-          ];
+          },
+        ];
 
-          // Add previous Q&A context
-          if (input.previousQA) {
-            for (const qa of input.previousQA) {
-              messages.push({
-                role: qa.role,
-                content: qa.content,
-              });
-            }
+        // Add previous Q&A context
+        if (input.previousQA) {
+          for (const qa of input.previousQA) {
+            messages.push({
+              role: qa.role,
+              content: qa.content,
+            });
           }
-
-          messages.push({
-            role: "user",
-            content: input.question,
-          });
-
-          const result = await invokeLLM({
-            messages,
-            maxTokens: 1000,
-          });
-
-          const content = result.choices[0]?.message?.content;
-          const answer = typeof content === "string" ? content : "";
-
-          return { answer };
-        } catch (error) {
-          console.error("Q&A error:", error);
-          throw new Error("質問への回答に失敗しました");
         }
+
+        messages.push({
+          role: "user",
+          content: input.question,
+        });
+
+        const result = await invokeLLM({
+          messages,
+          maxTokens: 1000,
+        });
+
+        const content = result.choices[0]?.message?.content;
+        const answer = typeof content === "string" ? content : "";
+
+        return { answer };
       }),
 
     // Generate realtime transcription token
     generateRealtimeToken: publicProcedure
       .mutation(async () => {
-        try {
-          console.log("[TRPC] Generating realtime token");
-          const token = await generateRealtimeToken();
-          return { token };
-        } catch (error) {
-          console.error("[TRPC] Failed to generate realtime token:", error);
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
-          throw new Error(`トークンの生成に失敗しました: ${errorMessage}`);
-        }
+        console.log("[TRPC] Generating realtime token");
+        const token = await generateRealtimeToken();
+        return { token };
       }),
 
     // Realtime translation endpoint
@@ -305,43 +284,37 @@ ${input.transcriptText}`,
 
         const targetLangName = languageNames[input.targetLanguage] || input.targetLanguage;
 
-        try {
-          // バッチ処理: 複数テキストを一度に翻訳
-          const textsToTranslate = input.texts.map(t => t.text).join("\n---SEPARATOR---\n");
+        // バッチ処理: 複数テキストを一度に翻訳
+        const textsToTranslate = input.texts.map(t => t.text).join("\n---SEPARATOR---\n");
 
-          const result = await invokeLLM({
-            messages: [
-              {
-                role: "system",
-                content: `You are a translator. Translate the following texts to ${targetLangName}.
+        const result = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `You are a translator. Translate the following texts to ${targetLangName}.
 Each text is separated by "---SEPARATOR---".
 Output only the translations in the same order, separated by "---SEPARATOR---".
 Maintain the original tone and nuance. Do not add any explanation.`,
-              },
-              {
-                role: "user",
-                content: textsToTranslate,
-              },
-            ],
-            maxTokens: 2000,
-          });
+            },
+            {
+              role: "user",
+              content: textsToTranslate,
+            },
+          ],
+          maxTokens: 2000,
+        });
 
-          const content = result.choices[0]?.message?.content;
-          const translatedTexts = typeof content === "string"
-            ? content.split("---SEPARATOR---").map(t => t.trim())
-            : [];
+        const content = result.choices[0]?.message?.content;
+        const translatedTexts = typeof content === "string"
+          ? content.split("---SEPARATOR---").map(t => t.trim())
+          : [];
 
-          return {
-            translations: input.texts.map((t, i) => ({
-              id: t.id,
-              translatedText: translatedTexts[i] || "",
-            })),
-          };
-        } catch (error) {
-          console.error("[TRPC] Translation error:", error);
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
-          throw new Error(`翻訳に失敗しました: ${errorMessage}`);
-        }
+        return {
+          translations: input.texts.map((t, i) => ({
+            id: t.id,
+            translatedText: translatedTexts[i] || "",
+          })),
+        };
       }),
 
     // Generate tags from transcript text
@@ -351,8 +324,7 @@ Maintain the original tone and nuance. Do not add any explanation.`,
         maxTags: z.number().default(5),
       }))
       .mutation(async ({ input }) => {
-        try {
-          const prompt = `以下のテキストから、最大${input.maxTags}個の重要なタグを抽出してください。各タグは短く（2-4語以内）、テキストの内容を的確に表すものにしてください。
+        const prompt = `以下のテキストから、最大${input.maxTags}個の重要なタグを抽出してください。各タグは短く（2-4語以内）、テキストの内容を的確に表すものにしてください。
 
 テキスト:
 ${input.text}
@@ -365,59 +337,54 @@ JSON形式で以下のように出力してください:
 
 必ずJSON配列のみを返し、その他のテキストは出力しないでください。`;
 
-          const result = await invokeLLM({
-            messages: [
-              {
-                role: "system",
-                content: "あなたはテキスト分析の専門家です。与えられたテキストから重要なタグを抽出します。",
-              },
-              {
-                role: "user",
-                content: prompt,
-              },
-            ],
-            maxTokens: 500,
-          });
+        const result = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "あなたはテキスト分析の専門家です。与えられたテキストから重要なタグを抽出します。",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          maxTokens: 500,
+        });
 
-          const content = result.choices[0]?.message?.content;
-          if (!content) {
-            throw new Error("LLMから応答が得られません");
-          }
-
-          // Extract JSON from response (handle markdown code blocks)
-          const contentStr = Array.isArray(content)
-            ? content.map(c => {
-                if (typeof c === 'string') return c;
-                if ('text' in c && typeof c.text === 'string') return c.text;
-                return '';
-              }).join('')
-            : String(content);
-          const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
-          const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          const parsed: unknown = JSON.parse(jsonStr);
-
-          // Validate and format response
-          const tags = Array.isArray(parsed)
-            ? parsed.map((tag: any) => ({
-                id: Date.now().toString() + Math.random(),
-                name: String(tag.name || "").trim(),
-                isAutoGenerated: true,
-                confidence: Math.min(1, Math.max(0, Number(tag.confidence) || 0.5)),
-              }))
-            : [];
-
-          // Sort by confidence and limit
-          return {
-            tags: tags
-              .filter((t: any) => t.name.length > 0)
-              .sort((a: any, b: any) => (b.confidence || 0) - (a.confidence || 0))
-              .slice(0, input.maxTags),
-          };
-        } catch (error) {
-          console.error("[TRPC] Generate tags error:", error);
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
-          throw new Error(`タグ生成に失敗しました: ${errorMessage}`);
+        const content = result.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error("LLMから応答が得られません");
         }
+
+        // Extract JSON from response (handle markdown code blocks)
+        const contentStr = Array.isArray(content)
+          ? content.map(c => {
+              if (typeof c === 'string') return c;
+              if ('text' in c && typeof c.text === 'string') return c.text;
+              return '';
+            }).join('')
+          : String(content);
+        const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
+        const parsed: unknown = JSON.parse(jsonStr);
+
+        // Validate and format response
+        const tags = Array.isArray(parsed)
+          ? parsed.map((tag: any) => ({
+              id: Date.now().toString() + Math.random(),
+              name: String(tag.name || "").trim(),
+              isAutoGenerated: true,
+              confidence: Math.min(1, Math.max(0, Number(tag.confidence) || 0.5)),
+            }))
+          : [];
+
+        // Sort by confidence and limit
+        return {
+          tags: tags
+            .filter((t: any) => t.name.length > 0)
+            .sort((a: any, b: any) => (b.confidence || 0) - (a.confidence || 0))
+            .slice(0, input.maxTags),
+        };
       }),
 
     // Extract action items from transcript text
@@ -427,8 +394,7 @@ JSON形式で以下のように出力してください:
         maxItems: z.number().default(10),
       }))
       .mutation(async ({ input }) => {
-        try {
-          const prompt = `以下のテキストから、最大${input.maxItems}個のアクションアイテム（やることリスト）を抽出してください。明確なタスク・目標・計画について言及されているものを選んでください。
+        const prompt = `以下のテキストから、最大${input.maxItems}個のアクションアイテム（やることリスト）を抽出してください。明確なタスク・目標・計画について言及されているものを選んでください。
 
 テキスト:
 ${input.text}
@@ -446,66 +412,61 @@ JSON形式で以下のように出力してください:
 
 必ずJSON配列のみを返し、その他のテキストは出力しないでください。`;
 
-          const result = await invokeLLM({
-            messages: [
-              {
-                role: "system",
-                content: "あなたはタスク管理の専門家です。与えられたテキストから実行すべきアクションアイテムを抽出します。",
-              },
-              {
-                role: "user",
-                content: prompt,
-              },
-            ],
-            maxTokens: 1000,
-          });
+        const result = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "あなたはタスク管理の専門家です。与えられたテキストから実行すべきアクションアイテムを抽出します。",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          maxTokens: 1000,
+        });
 
-          const content = result.choices[0]?.message?.content;
-          if (!content) {
-            throw new Error("LLMから応答が得られません");
-          }
-
-          // Extract JSON from response
-          const contentStr = Array.isArray(content)
-            ? content.map(c => {
-                if (typeof c === 'string') return c;
-                if ('text' in c && typeof c.text === 'string') return c.text;
-                return '';
-              }).join('')
-            : String(content);
-          const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
-          const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          const parsed: unknown = JSON.parse(jsonStr);
-
-          // Validate and format response
-          const items = Array.isArray(parsed)
-            ? parsed.map((item: any) => ({
-                id: Date.now().toString() + Math.random(),
-                text: String(item.text || "").trim(),
-                priority: ['high', 'medium', 'low'].includes(item.priority) ? item.priority : 'medium',
-                completed: false,
-                isAutoGenerated: true,
-                confidence: Math.min(1, Math.max(0, Number(item.confidence) || 0.5)),
-              }))
-            : [];
-
-          // Sort by priority (high > medium > low) and confidence
-          const priorityOrder = { high: 0, medium: 1, low: 2 };
-          return {
-            actionItems: items
-              .filter((i: any) => i.text.length > 0)
-              .sort((a: any, b: any) => {
-                const priorityDiff = priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder];
-                if (priorityDiff !== 0) return priorityDiff;
-                return (b.confidence || 0) - (a.confidence || 0);
-              })
-              .slice(0, input.maxItems),
-          };
-        } catch (error) {
-          console.error("[TRPC] Extract action items error:", error);
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
-          throw new Error(`アクションアイテム抽出に失敗しました: ${errorMessage}`);
+        const content = result.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error("LLMから応答が得られません");
         }
+
+        // Extract JSON from response
+        const contentStr = Array.isArray(content)
+          ? content.map(c => {
+              if (typeof c === 'string') return c;
+              if ('text' in c && typeof c.text === 'string') return c.text;
+              return '';
+            }).join('')
+          : String(content);
+        const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
+        const parsed: unknown = JSON.parse(jsonStr);
+
+        // Validate and format response
+        const items = Array.isArray(parsed)
+          ? parsed.map((item: any) => ({
+              id: Date.now().toString() + Math.random(),
+              text: String(item.text || "").trim(),
+              priority: ['high', 'medium', 'low'].includes(item.priority) ? item.priority : 'medium',
+              completed: false,
+              isAutoGenerated: true,
+              confidence: Math.min(1, Math.max(0, Number(item.confidence) || 0.5)),
+            }))
+          : [];
+
+        // Sort by priority (high > medium > low) and confidence
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return {
+          actionItems: items
+            .filter((i: any) => i.text.length > 0)
+            .sort((a: any, b: any) => {
+              const priorityDiff = priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder];
+              if (priorityDiff !== 0) return priorityDiff;
+              return (b.confidence || 0) - (a.confidence || 0);
+            })
+            .slice(0, input.maxItems),
+        };
       }),
 
     // Analyze sentiment from transcript text
@@ -514,8 +475,7 @@ JSON形式で以下のように出力してください:
         text: z.string(),
       }))
       .mutation(async ({ input }) => {
-        try {
-          const prompt = `以下のテキストの感情分析を行ってください。以下の6つの感情各々のスコア（0-1）と、全体的なセンチメント（ポジティブ/ニュートラル/ネガティブ）を判定してください。
+        const prompt = `以下のテキストの感情分析を行ってください。以下の6つの感情各々のスコア（0-1）と、全体的なセンチメント（ポジティブ/ニュートラル/ネガティブ）を判定してください。
 
 テキスト:
 ${input.text}
@@ -539,81 +499,76 @@ JSON形式で以下のように出力してください:
 
 必ずJSON形式のみを返してください。`;
 
-          const result = await invokeLLM({
-            messages: [
-              {
-                role: "system",
-                content: "あなたは感情分析の専門家です。テキストから感情を抽出し、定量化します。",
-              },
-              {
-                role: "user",
-                content: prompt,
-              },
-            ],
-            maxTokens: 500,
-          });
+        const result = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "あなたは感情分析の専門家です。テキストから感情を抽出し、定量化します。",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          maxTokens: 500,
+        });
 
-          const content = result.choices[0]?.message?.content;
-          if (!content) {
-            throw new Error("LLMから応答が得られません");
-          }
-
-          // Extract JSON from response
-          const contentStr = Array.isArray(content)
-            ? content.map(c => {
-                if (typeof c === 'string') return c;
-                if ('text' in c && typeof c.text === 'string') return c.text;
-                return '';
-              }).join('')
-            : String(content);
-          const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
-          const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          const raw = JSON.parse(jsonStr);
-          if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-            throw new Error(`LLMが不正なJSONを返しました: オブジェクト形式ではありません (${jsonStr.slice(0, 100)})`);
-          }
-          const parsed = raw as Record<string, unknown>;
-
-          // Validate and format response
-          const score = Math.min(1, Math.max(-1, Number(parsed.score) || 0));
-          const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0.5));
-
-          // Determine overall sentiment based on score
-          let overallSentiment: 'positive' | 'neutral' | 'negative';
-          if (score > 0.1) {
-            overallSentiment = 'positive';
-          } else if (score < -0.1) {
-            overallSentiment = 'negative';
-          } else {
-            overallSentiment = 'neutral';
-          }
-
-          // Normalize emotion scores to 0-1
-          const emotionsData: Record<string, unknown> = typeof parsed.emotions === 'object' && parsed.emotions !== null
-            ? parsed.emotions as Record<string, unknown>
-            : {};
-          const emotions = {
-            joy: Math.min(1, Math.max(0, Number(emotionsData.joy) || 0)),
-            sadness: Math.min(1, Math.max(0, Number(emotionsData.sadness) || 0)),
-            anger: Math.min(1, Math.max(0, Number(emotionsData.anger) || 0)),
-            fear: Math.min(1, Math.max(0, Number(emotionsData.fear) || 0)),
-            surprise: Math.min(1, Math.max(0, Number(emotionsData.surprise) || 0)),
-            disgust: Math.min(1, Math.max(0, Number(emotionsData.disgust) || 0)),
-          };
-
-          return {
-            overallSentiment,
-            score,
-            confidence,
-            emotions,
-            summary: String(parsed.summary || "").trim(),
-            processedAt: new Date(),
-          };
-        } catch (error) {
-          console.error("[TRPC] Sentiment analysis error:", error);
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
-          throw new Error(`感情分析に失敗しました: ${errorMessage}`);
+        const content = result.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error("LLMから応答が得られません");
         }
+
+        // Extract JSON from response
+        const contentStr = Array.isArray(content)
+          ? content.map(c => {
+              if (typeof c === 'string') return c;
+              if ('text' in c && typeof c.text === 'string') return c.text;
+              return '';
+            }).join('')
+          : String(content);
+        const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
+        const raw = JSON.parse(jsonStr);
+        if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+          throw new Error(`LLMが不正なJSONを返しました: オブジェクト形式ではありません (${jsonStr.slice(0, 100)})`);
+        }
+        const parsed = raw as Record<string, unknown>;
+
+        // Validate and format response
+        const score = Math.min(1, Math.max(-1, Number(parsed.score) || 0));
+        const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0.5));
+
+        // Determine overall sentiment based on score
+        let overallSentiment: 'positive' | 'neutral' | 'negative';
+        if (score > 0.1) {
+          overallSentiment = 'positive';
+        } else if (score < -0.1) {
+          overallSentiment = 'negative';
+        } else {
+          overallSentiment = 'neutral';
+        }
+
+        // Normalize emotion scores to 0-1
+        const emotionsData: Record<string, unknown> = typeof parsed.emotions === 'object' && parsed.emotions !== null
+          ? parsed.emotions as Record<string, unknown>
+          : {};
+        const emotions = {
+          joy: Math.min(1, Math.max(0, Number(emotionsData.joy) || 0)),
+          sadness: Math.min(1, Math.max(0, Number(emotionsData.sadness) || 0)),
+          anger: Math.min(1, Math.max(0, Number(emotionsData.anger) || 0)),
+          fear: Math.min(1, Math.max(0, Number(emotionsData.fear) || 0)),
+          surprise: Math.min(1, Math.max(0, Number(emotionsData.surprise) || 0)),
+          disgust: Math.min(1, Math.max(0, Number(emotionsData.disgust) || 0)),
+        };
+
+        return {
+          overallSentiment,
+          score,
+          confidence,
+          emotions,
+          summary: String(parsed.summary || "").trim(),
+          processedAt: new Date(),
+        };
       }),
 
     // Extract keywords from transcript text
@@ -623,8 +578,7 @@ JSON形式で以下のように出力してください:
         maxKeywords: z.number().default(10),
       }))
       .mutation(async ({ input }) => {
-        try {
-          const prompt = `以下のテキストから、最大${input.maxKeywords}個の重要なキーワード・キーフレーズを抽出してください。業界用語、重要な概念、繰り返し言及される主題を優先してください。
+        const prompt = `以下のテキストから、最大${input.maxKeywords}個の重要なキーワード・キーフレーズを抽出してください。業界用語、重要な概念、繰り返し言及される主題を優先してください。
 
 テキスト:
 ${input.text}
@@ -639,66 +593,61 @@ JSON形式で以下のように出力してください:
 
 必ずJSON配列のみを返してください。`;
 
-          const result = await invokeLLM({
-            messages: [
-              {
-                role: "system",
-                content: "あなたはテキスト分析の専門家です。テキストから重要なキーワードを抽出します。",
-              },
-              {
-                role: "user",
-                content: prompt,
-              },
-            ],
-            maxTokens: 1000,
-          });
+        const result = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "あなたはテキスト分析の専門家です。テキストから重要なキーワードを抽出します。",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          maxTokens: 1000,
+        });
 
-          const content = result.choices[0]?.message?.content;
-          if (!content) {
-            throw new Error("LLMから応答が得られません");
-          }
-
-          // Extract JSON from response
-          const contentStr = Array.isArray(content)
-            ? content.map(c => {
-                if (typeof c === 'string') return c;
-                if ('text' in c && typeof c.text === 'string') return c.text;
-                return '';
-              }).join('')
-            : String(content);
-          const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
-          const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          const parsed = JSON.parse(jsonStr);
-
-          // Calculate startIndex for each keyword in the original text
-          const keywords = Array.isArray(parsed)
-            ? parsed.map((kw: any, i: number) => ({
-                id: Date.now().toString() + i,
-                text: String(kw.text || "").trim(),
-                importance: ['high', 'medium', 'low'].includes(kw.importance) ? kw.importance : 'medium',
-                confidence: Math.min(1, Math.max(0, Number(kw.confidence) || 0.5)),
-                frequency: Math.max(1, Number(kw.frequency) || 1),
-                startIndex: input.text.toLowerCase().indexOf((kw.text || "").toLowerCase()),
-              }))
-            : [];
-
-          // Sort by importance and confidence
-          const importanceOrder = { high: 0, medium: 1, low: 2 };
-          return {
-            keywords: keywords
-              .filter((k: any) => k.text.length > 0 && k.startIndex >= 0)
-              .sort((a: any, b: any) => {
-                const importanceDiff = importanceOrder[a.importance as keyof typeof importanceOrder] - importanceOrder[b.importance as keyof typeof importanceOrder];
-                if (importanceDiff !== 0) return importanceDiff;
-                return (b.confidence || 0) - (a.confidence || 0);
-              })
-              .slice(0, input.maxKeywords),
-          };
-        } catch (error) {
-          console.error("[TRPC] Extract keywords error:", error);
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
-          throw new Error(`キーワード抽出に失敗しました: ${errorMessage}`);
+        const content = result.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error("LLMから応答が得られません");
         }
+
+        // Extract JSON from response
+        const contentStr = Array.isArray(content)
+          ? content.map(c => {
+              if (typeof c === 'string') return c;
+              if ('text' in c && typeof c.text === 'string') return c.text;
+              return '';
+            }).join('')
+          : String(content);
+        const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
+        const parsed = JSON.parse(jsonStr);
+
+        // Calculate startIndex for each keyword in the original text
+        const keywords = Array.isArray(parsed)
+          ? parsed.map((kw: any, i: number) => ({
+              id: Date.now().toString() + i,
+              text: String(kw.text || "").trim(),
+              importance: ['high', 'medium', 'low'].includes(kw.importance) ? kw.importance : 'medium',
+              confidence: Math.min(1, Math.max(0, Number(kw.confidence) || 0.5)),
+              frequency: Math.max(1, Number(kw.frequency) || 1),
+              startIndex: input.text.toLowerCase().indexOf((kw.text || "").toLowerCase()),
+            }))
+          : [];
+
+        // Sort by importance and confidence
+        const importanceOrder = { high: 0, medium: 1, low: 2 };
+        return {
+          keywords: keywords
+            .filter((k: any) => k.text.length > 0 && k.startIndex >= 0)
+            .sort((a: any, b: any) => {
+              const importanceDiff = importanceOrder[a.importance as keyof typeof importanceOrder] - importanceOrder[b.importance as keyof typeof importanceOrder];
+              if (importanceDiff !== 0) return importanceDiff;
+              return (b.confidence || 0) - (a.confidence || 0);
+            })
+            .slice(0, input.maxKeywords),
+        };
       }),
 
     // Export recording to Markdown format

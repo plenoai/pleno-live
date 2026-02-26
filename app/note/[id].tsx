@@ -282,29 +282,24 @@ export default function NoteDetailScreen() {
             audioBase64 = base64Data;
             filename = "recording.webm"; // Web recordings are typically webm
           } else if (recording.audioUri.startsWith("blob:")) {
-            try {
-              const response = await fetch(recording.audioUri);
-              const blob = await response.blob();
+            const response = await fetch(recording.audioUri);
+            const blob = await response.blob();
 
-              // Convert blob to base64
-              const base64Data = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  const result = reader.result as string;
-                  // Remove data URL prefix (e.g., "data:audio/webm;base64,")
-                  const base64 = result.split(',')[1];
-                  resolve(base64);
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-              });
+            // Convert blob to base64
+            const base64Data = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const result = reader.result as string;
+                // Remove data URL prefix (e.g., "data:audio/webm;base64,")
+                const base64 = result.split(',')[1];
+                resolve(base64);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
 
-              audioBase64 = base64Data;
-              filename = "recording.webm";
-            } catch (webError) {
-              console.error("[Transcribe] Failed to read blob:", webError);
-              throw new Error("Blob URLからの音声データの読み込みに失敗しました");
-            }
+            audioBase64 = base64Data;
+            filename = "recording.webm";
           } else {
             throw new Error("未対応の音声URI形式です: " + recording.audioUri.substring(0, 50));
           }
@@ -407,32 +402,24 @@ const handleSummarize = async () => {
   const handleGenerateTags = async () => {
     if (!recording?.transcript) return;
 
-    try {
-      const result = await tagsMutation.mutateAsync({
-        text: recording.transcript.text,
-        maxTags: 5,
-      });
-      if (result.tags && result.tags.length > 0) {
-        updateRecording(recording.id, { tags: result.tags });
-      }
-    } catch (error) {
-      console.error("Tags generation error:", error);
+    const result = await tagsMutation.mutateAsync({
+      text: recording.transcript.text,
+      maxTags: 5,
+    });
+    if (result.tags && result.tags.length > 0) {
+      updateRecording(recording.id, { tags: result.tags });
     }
   };
 
   const handleExtractActionItems = async () => {
     if (!recording?.transcript) return;
 
-    try {
-      const result = await actionItemsMutation.mutateAsync({
-        text: recording.transcript.text,
-        maxItems: 10,
-      });
-      if (result.actionItems && result.actionItems.length > 0) {
-        updateRecording(recording.id, { actionItems: result.actionItems });
-      }
-    } catch (error) {
-      console.error("Action items extraction error:", error);
+    const result = await actionItemsMutation.mutateAsync({
+      text: recording.transcript.text,
+      maxItems: 10,
+    });
+    if (result.actionItems && result.actionItems.length > 0) {
+      updateRecording(recording.id, { actionItems: result.actionItems });
     }
   };
 
@@ -553,31 +540,23 @@ const handleSummarize = async () => {
   const handleExtractKeywords = async () => {
     if (!recording?.transcript) return;
 
-    try {
-      const result = await keywordsMutation.mutateAsync({
-        text: recording.transcript.text,
-        maxKeywords: 10,
-      });
-      if (result.keywords && result.keywords.length > 0) {
-        updateRecording(recording.id, { keywords: result.keywords });
-      }
-    } catch (error) {
-      console.error("Keywords extraction error:", error);
+    const result = await keywordsMutation.mutateAsync({
+      text: recording.transcript.text,
+      maxKeywords: 10,
+    });
+    if (result.keywords && result.keywords.length > 0) {
+      updateRecording(recording.id, { keywords: result.keywords });
     }
   };
 
   const handleAnalyzeSentiment = async () => {
     if (!recording?.transcript) return;
 
-    try {
-      const result = await sentimentMutation.mutateAsync({
-        text: recording.transcript.text,
-      });
-      if (result) {
-        updateRecording(recording.id, { sentiment: result });
-      }
-    } catch (error) {
-      console.error("Sentiment analysis error:", error);
+    const result = await sentimentMutation.mutateAsync({
+      text: recording.transcript.text,
+    });
+    if (result) {
+      updateRecording(recording.id, { sentiment: result });
     }
   };
 
@@ -604,8 +583,6 @@ const handleSummarize = async () => {
         setTranscript(recording.id, updatedTranscript);
         Haptics.impact("medium");
       }
-    } catch (error) {
-      console.error("Translation error:", error);
     } finally {
       setIsProcessing(false);
     }
@@ -672,8 +649,7 @@ const handleSummarize = async () => {
           await shareAsync(fileUri);
         }
       }
-    } catch (error) {
-      console.error("Export error:", error);
+    } catch {
       if (Platform.OS !== "web") {
         const { Alert } = await import("react-native");
         Alert.alert("エラー", "エクスポートに失敗しました");
@@ -737,8 +713,6 @@ const handleSummarize = async () => {
         };
         addQAMessage(recording.id, assistantMessage);
       }
-    } catch (error) {
-      console.error("Q&A error:", error);
     } finally {
       setIsProcessing(false);
     }
