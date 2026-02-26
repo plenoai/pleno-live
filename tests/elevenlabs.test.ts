@@ -10,7 +10,7 @@ describe("ElevenLabs API Key Validation", () => {
   });
 
   it.skipIf(!hasApiKey)("should validate API key by fetching user info", async () => {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
+    const apiKey = process.env.ELEVENLABS_API_KEY!;
 
     // Use user endpoint which should work with most API key permissions
     const response = await fetch("https://api.elevenlabs.io/v1/user", {

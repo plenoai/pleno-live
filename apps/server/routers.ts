@@ -604,7 +604,7 @@ JSON形式で以下のように出力してください:
           }
 
           // Normalize emotion scores to 0-1
-          const emotionsData = typeof parsed.emotions === 'object' && parsed.emotions !== null
+          const emotionsData: Record<string, unknown> = typeof parsed.emotions === 'object' && parsed.emotions !== null
             ? parsed.emotions as Record<string, unknown>
             : {};
           const emotions = {
