@@ -76,6 +76,10 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const audioMeteringRef = useRef<AudioMeteringController | null>(null);
   const systemAudioStreamRef = useRef<SystemAudioStream | null>(null);
+  // auto-saveのステールクロージャを防ぐためのref
+  const durationRef = useRef(0);
+  const highlightsRef = useRef<Highlight[]>([]);
+  const fullMeteringHistoryRef = useRef<number[]>([]);
 
   const audioRecorder = useAudioRecorder(RECORDING_OPTIONS);
   const [meteringHistory, setMeteringHistory] = useState<number[]>([]);
@@ -147,6 +151,11 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       }
     };
   }, [isRecording, isPaused, realtimeEnabled, realtimeSoundLevel]);
+
+  // auto-save用refを最新ステートと同期
+  useEffect(() => { durationRef.current = duration; }, [duration]);
+  useEffect(() => { highlightsRef.current = highlights; }, [highlights]);
+  useEffect(() => { fullMeteringHistoryRef.current = fullMeteringHistory; }, [fullMeteringHistory]);
 
   // 翻訳先言語が変わったらキャッシュをクリア
   useEffect(() => {
@@ -263,14 +272,14 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       const recordingId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       setCurrentRecordingId(recordingId);
 
-      // 自動保存を開始
+      // 自動保存を開始（refから最新値を読むことでステールクロージャを回避）
       startAutoSave(() => ({
         id: recordingId,
-        duration,
-        highlights,
+        duration: durationRef.current,
+        highlights: highlightsRef.current,
         realtimeEnabled,
         realtimeSegments: realtimeState.segments,
-        meteringHistory: fullMeteringHistory,
+        meteringHistory: fullMeteringHistoryRef.current,
       }));
 
       console.log('[RecordingSession] Starting recording with settings:', {
@@ -413,7 +422,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       }
 
       const now = new Date();
-      const recordingId = currentRecordingId || Date.now().toString();
+      const recordingId = currentRecordingId || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
       const normalizeWaveform = (data: number[]): number[] => {
         if (data.length === 0) return Array(40).fill(0.1);
