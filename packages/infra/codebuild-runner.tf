@@ -54,6 +54,22 @@ resource "aws_iam_role_policy" "codebuild_runner" {
         Effect = "Allow"
         Action = ["s3:GetObject", "s3:PutObject"]
         Resource = "${aws_s3_bucket.codebuild_cache.arn}/*"
+      },
+      {
+        # ECRからカスタムrunnerイメージをプル（リポジトリスコープ）
+        Effect = "Allow"
+        Action = [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:BatchCheckLayerAvailability"
+        ]
+        Resource = aws_ecr_repository.runner.arn
+      },
+      {
+        # GetAuthorizationTokenはリソースレベルの制限不可
+        Effect   = "Allow"
+        Action   = "ecr:GetAuthorizationToken"
+        Resource = "*"
       }
     ]
   })
@@ -104,11 +120,12 @@ resource "aws_codebuild_project" "runner" {
 
   environment {
     type         = "LINUX_CONTAINER"
-    image        = "aws/codebuild/standard:7.0"
-    # large: 4 vCPU / 7GB RAM ($0.01/min → 6分で約$0.06)
+    # Android SDK焼き込み済みカスタムイメージ (ECR) - setup-androidステップ不要
+    image        = "${aws_ecr_repository.runner.repository_url}:latest"
+    # large: 4 vCPU / 7GB RAM ($0.01/min)
     compute_type = "BUILD_GENERAL1_LARGE"
 
-    image_pull_credentials_type = "CODEBUILD"
+    image_pull_credentials_type = "SERVICE_ROLE"
   }
 
   # Gradleキャッシュ

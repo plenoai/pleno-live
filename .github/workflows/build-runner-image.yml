@@ -1,0 +1,40 @@
+name: Build Runner Image
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - packages/infra/runner.Dockerfile
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::951872725222:role/pleno-live-github-actions
+          aws-region: ap-northeast-1
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push runner image
+        env:
+          IMAGE: ${{ steps.ecr-login.outputs.registry }}/pleno-live-runner
+        run: |
+          docker build \
+            -f packages/infra/runner.Dockerfile \
+            -t $IMAGE:latest \
+            packages/infra/
+          docker push $IMAGE:latest
+          echo "Image pushed: $IMAGE:latest"
