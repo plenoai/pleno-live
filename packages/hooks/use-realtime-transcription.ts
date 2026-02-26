@@ -70,8 +70,6 @@ export function useRealtimeTranscription() {
    */
   const startAudioStreaming = useCallback(async () => {
     try {
-      console.log("[useRealtimeTranscription] Starting audio streaming...");
-
       const audioStream = createAudioStream({
         sampleRate: 16000,
         channels: 1,
@@ -81,13 +79,8 @@ export function useRealtimeTranscription() {
 
       audioStreamRef.current = audioStream;
 
-      let chunkCount = 0;
       await audioStream.start(
         (base64Audio) => {
-          chunkCount++;
-          if (chunkCount % 10 === 1) {
-            console.log(`[useRealtimeTranscription] Sending audio chunk #${chunkCount}, connected: ${clientRef.current?.isConnected}`);
-          }
           if (clientRef.current?.isConnected) {
             clientRef.current.sendAudioChunk(base64Audio, 16000);
           }
@@ -97,7 +90,6 @@ export function useRealtimeTranscription() {
         }
       );
 
-      console.log("[useRealtimeTranscription] Audio streaming started");
     } catch (error) {
       console.error("[useRealtimeTranscription] Failed to start audio streaming:", error);
       setState((prev) => ({
@@ -112,14 +104,10 @@ export function useRealtimeTranscription() {
    */
   const stopAudioStreaming = useCallback(async () => {
     try {
-      console.log("[useRealtimeTranscription] Stopping audio streaming...");
-
       if (audioStreamRef.current) {
         await audioStreamRef.current.stop();
         audioStreamRef.current = null;
       }
-
-      console.log("[useRealtimeTranscription] Audio streaming stopped");
     } catch (error) {
       console.error("[useRealtimeTranscription] Failed to stop audio streaming:", error);
     }
@@ -140,9 +128,7 @@ export function useRealtimeTranscription() {
     options: RealtimeOptions = {},
     callbacks?: RealtimeSessionCallbacks
   ): Promise<void> => {
-    // コールバックを保存
     callbacksRef.current = callbacks || null;
-    console.log("[useRealtimeTranscription] Starting session for recording:", recordingId);
 
     // 既存セッションがある場合は終了
     if (clientRef.current) {
@@ -161,12 +147,8 @@ export function useRealtimeTranscription() {
       currentRecordingIdRef.current = recordingId;
       recordingStartTimeRef.current = Date.now();
 
-      // トークン取得
-      console.log("[useRealtimeTranscription] Fetching token...");
       const tokenResult = await generateTokenMutation.mutateAsync();
       const token = tokenResult.token;
-
-      console.log("[useRealtimeTranscription] Token received, connecting WebSocket...");
 
       // WebSocketクライアント初期化
       const client = new RealtimeTranscriptionClient();
@@ -174,7 +156,6 @@ export function useRealtimeTranscription() {
 
       // イベントハンドラ設定
       client.on("session_started", () => {
-        console.log("[useRealtimeTranscription] Session started");
         setState((prev) => ({
           ...prev,
           connectionStatus: "connected",
@@ -182,8 +163,6 @@ export function useRealtimeTranscription() {
       });
 
       client.on("partial", (data: { text: string }) => {
-        console.log("[useRealtimeTranscription] Partial transcript:", data.text.substring(0, 50));
-
         const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
 
         setState((prev) => {
@@ -233,8 +212,6 @@ export function useRealtimeTranscription() {
       });
 
       client.on("committed", (data: { text: string }) => {
-        console.log("[useRealtimeTranscription] Committed transcript:", data.text);
-
         const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
 
         setState((prev) => {
@@ -287,8 +264,6 @@ export function useRealtimeTranscription() {
         text: string;
         words: Array<{ text: string; start: number; end: number; speaker_id?: string }>;
       }) => {
-        console.log("[useRealtimeTranscription] Committed with timestamps:", data.text);
-
         const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
 
         // 話者情報を抽出
@@ -379,7 +354,6 @@ export function useRealtimeTranscription() {
       });
 
       client.on("close", () => {
-        console.log("[useRealtimeTranscription] Connection closed");
         setState((prev) => ({
           ...prev,
           isActive: false,
@@ -399,14 +373,9 @@ export function useRealtimeTranscription() {
 
       await client.connect(token, connectionOptions);
 
-      // 音声ストリーミングを開始（skipAudioStreamingが指定されている場合はスキップ）
       if (!options.skipAudioStreaming) {
         await startAudioStreaming();
-      } else {
-        console.log("[useRealtimeTranscription] Skipping internal audio streaming (external audio source will be used)");
       }
-
-      console.log("[useRealtimeTranscription] Session started successfully");
     } catch (error) {
       console.error("[useRealtimeTranscription] Failed to start session:", error);
 
@@ -430,9 +399,6 @@ export function useRealtimeTranscription() {
    * セッションを停止
    */
   const stopSession = useCallback(async (): Promise<void> => {
-    console.log("[useRealtimeTranscription] Stopping session");
-
-    // 音声ストリーミングを停止
     await stopAudioStreaming();
 
     if (clientRef.current) {
@@ -499,21 +465,12 @@ export function useRealtimeTranscription() {
   }, [state.segments]);
 
   /**
-   * getMergedSegments - 後方互換性のためのラッパー（非推奨）
-   * 新しいコードではmergedSegmentsを直接使用してください
-   */
-  const getMergedSegments = useCallback((): TranscriptSegment[] => {
-    return mergedSegments;
-  }, [mergedSegments]);
-
-  /**
    * セグメントを統合して最終的な文字起こしテキストを生成
    *
    * @returns 統合されたテキスト
    */
   const consolidateSegments = useCallback((): string => {
-    const merged = getMergedSegments();
-    return merged
+    return mergedSegments
       .filter((s) => !s.isPartial)
       .map((s) => {
         if (s.speaker) {
@@ -522,7 +479,7 @@ export function useRealtimeTranscription() {
         return s.text;
       })
       .join("\n");
-  }, [getMergedSegments]);
+  }, [mergedSegments]);
 
   return {
     state,
@@ -530,7 +487,6 @@ export function useRealtimeTranscription() {
     stopSession,
     sendAudioChunk,
     consolidateSegments,
-    getMergedSegments,
     mergedSegments,
     soundLevel,
   };

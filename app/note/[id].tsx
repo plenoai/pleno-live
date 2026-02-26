@@ -124,7 +124,6 @@ export default function NoteDetailScreen() {
       !isProcessing &&
       !autoProcessedRef.current.transcribe
     ) {
-      console.log("[Auto] Starting auto-transcription");
       autoProcessedRef.current.transcribe = true;
       handleTranscribe();
     }
@@ -141,7 +140,6 @@ export default function NoteDetailScreen() {
       !isProcessing &&
       !autoProcessedRef.current.summarize
     ) {
-      console.log("[Auto] Starting auto-summarization");
       autoProcessedRef.current.summarize = true;
       handleSummarize();
     }
@@ -158,7 +156,6 @@ export default function NoteDetailScreen() {
         !isProcessing &&
         !autoProcessedRef.current.keywords
       ) {
-        console.log("[Auto] Starting auto-keyword extraction");
         autoProcessedRef.current.keywords = true;
         handleExtractKeywords();
       }
@@ -170,7 +167,6 @@ export default function NoteDetailScreen() {
         !isProcessing &&
         !autoProcessedRef.current.sentiment
       ) {
-        console.log("[Auto] Starting auto-sentiment analysis");
         autoProcessedRef.current.sentiment = true;
         handleAnalyzeSentiment();
       }
@@ -277,26 +273,15 @@ export default function NoteDetailScreen() {
       let filename = "recording.m4a";
 
       if (recording.audioUri) {
-        console.log("[Transcribe] Audio URI:", recording.audioUri.substring(0, 100) + "...");
-
-        // Handle Web platform
         if (Platform.OS === "web") {
-          console.log("[Transcribe] Running on web");
-
-          // Check if audioUri is already a data URL
           if (recording.audioUri.startsWith("data:")) {
-            console.log("[Transcribe] Data URL detected - extracting base64");
-            // Extract base64 from data URL
             const base64Data = recording.audioUri.split(',')[1];
             if (!base64Data) {
               throw new Error("Data URLからbase64データを抽出できませんでした");
             }
-            console.log("[Transcribe] Base64 data length:", base64Data.length);
             audioBase64 = base64Data;
             filename = "recording.webm"; // Web recordings are typically webm
           } else if (recording.audioUri.startsWith("blob:")) {
-            // Handle blob URL (fallback for older recordings)
-            console.log("[Transcribe] Blob URL detected - fetching and converting");
             try {
               const response = await fetch(recording.audioUri);
               const blob = await response.blob();
@@ -314,7 +299,6 @@ export default function NoteDetailScreen() {
                 reader.readAsDataURL(blob);
               });
 
-              console.log("[Transcribe] Base64 data length:", base64Data.length);
               audioBase64 = base64Data;
               filename = "recording.webm";
             } catch (webError) {
@@ -325,23 +309,14 @@ export default function NoteDetailScreen() {
             throw new Error("未対応の音声URI形式です: " + recording.audioUri.substring(0, 50));
           }
         } else {
-          // Handle native platforms (iOS/Android)
           if (recording.audioUri.startsWith("file://") || !recording.audioUri.startsWith("http")) {
-            console.log("[Transcribe] Reading local file as base64...");
-
-            // Check if file exists
             const fileInfo = await FileSystem.getInfoAsync(recording.audioUri);
-            console.log("[Transcribe] File info:", fileInfo);
 
             if (!fileInfo.exists) {
               throw new Error("音声ファイルが見つかりません: " + recording.audioUri);
             }
 
-            // Read local file as base64
-            const base64Data = await FileSystem.readAsBase64(recording.audioUri);
-
-            console.log("[Transcribe] Base64 data length:", base64Data.length);
-            audioBase64 = base64Data;
+            audioBase64 = await FileSystem.readAsBase64(recording.audioUri);
             filename = recording.audioUri.split("/").pop() || "recording.m4a";
           }
         }
@@ -350,8 +325,6 @@ export default function NoteDetailScreen() {
       if (!audioBase64) {
         throw new Error("音声データの読み込みに失敗しました");
       }
-
-      console.log("[Transcribe] Sending to API with base64 length:", audioBase64.length);
 
       // whisper-local is handled separately, fallback to gemini for API call
       const apiProvider = settings.transcriptionProvider === "whisper-local" ? "gemini" : settings.transcriptionProvider;
@@ -363,8 +336,6 @@ export default function NoteDetailScreen() {
         diarize: settings.transcriptionProvider === "elevenlabs",
         provider: apiProvider,
       });
-
-      console.log("[Transcribe] Result:", result);
 
       if (result.text) {
         setTranscript(recording.id, {
@@ -730,10 +701,6 @@ const handleSummarize = async () => {
 
     // 現在再生位置のコンテキストを取得
     const contextText = getContextAroundTimestamp(currentTime);
-    const contextInfo = contextText
-      ? `\n\n[現在再生位置 ${formatTime(currentTime)} 周辺のテキスト]\n${contextText}`
-      : "";
-
     const userMessage: QAMessage = {
       id: Date.now().toString(),
       role: "user",
@@ -2055,10 +2022,6 @@ const styles = StyleSheet.create({
   summarySection: {
     gap: 8,
   },
-  summaryText: {
-    fontSize: 15,
-    lineHeight: 24,
-  },
   bulletItem: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -2070,11 +2033,6 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     marginTop: 8,
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 24,
   },
   qaTab: {
     flex: 1,

@@ -11,7 +11,7 @@ import enTranslations from './locales/en.json';
 export type Language = 'ja' | 'en';
 
 interface Translations {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface LanguageContextValue {
@@ -23,7 +23,6 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-const LANGUAGE_KEY = 'app-language';
 const LANGUAGE_STORAGE_KEY = 'user-language-preference';
 
 const translations: Record<Language, Translations> = {
@@ -35,13 +34,13 @@ const translations: Record<Language, Translations> = {
  * ネストされたキーで翻訳を取得
  * 例: "settings.title" -> translations.settings.title
  */
-function getNestedValue(obj: any, path: string, defaultValue: string = path): string {
+function getNestedValue(obj: Record<string, unknown>, path: string, defaultValue: string = path): string {
   const keys = path.split('.');
-  let current = obj;
+  let current: unknown = obj;
 
   for (const key of keys) {
     if (typeof current === 'object' && current !== null && key in current) {
-      current = current[key];
+      current = (current as Record<string, unknown>)[key];
     } else {
       return defaultValue;
     }
@@ -77,7 +76,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     try {
       await Storage.setItem(LANGUAGE_STORAGE_KEY, lang);
       setLanguageState(lang);
-      console.log('[LanguageContext] Language changed to:', lang);
     } catch (error) {
       console.error('[LanguageContext] Failed to save language:', error);
     }

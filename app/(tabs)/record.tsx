@@ -14,7 +14,7 @@ import { SystemAudioStream, AudioSource } from "@/packages/lib/system-audio-stre
 import type { RecordingDraft } from "@/packages/types/recording";
 
 import { ScreenContainer } from "@/packages/components/screen-container";
-import { IconSymbol } from "@/packages/components/ui/icon-symbol";
+import { IconSymbol, type IconSymbolName } from "@/packages/components/ui/icon-symbol";
 import { Button } from "@/packages/components/ui/button";
 import { Badge } from "@/packages/components/ui/badge";
 import { useColors } from "@/packages/hooks/use-colors";
@@ -29,7 +29,7 @@ function formatTime(seconds: number): string {
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
 }
 
-const AUDIO_SOURCE_ICONS: Record<AudioSource, string> = {
+const AUDIO_SOURCE_ICONS: Record<AudioSource, IconSymbolName> = {
   microphone: "mic.fill",
   system: "display",
   both: "waveform",
@@ -186,7 +186,7 @@ export default function RecordScreen() {
                   activeOpacity={0.7}
                 >
                   <IconSymbol
-                    name={option.icon as any}
+                    name={option.icon}
                     size={16}
                     color={audioSource === option.key ? "#FFFFFF" : colors.muted}
                   />

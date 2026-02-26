@@ -15,13 +15,9 @@ import { ScreenContainer } from "@/packages/components/screen-container";
 import { RecordingCard } from "@/packages/components/recording-card";
 import { Haptics, Storage } from "@/packages/platform";
 import { IconSymbol } from "@/packages/components/ui/icon-symbol";
-import { Input } from "@/packages/components/ui/input";
-import { Badge } from "@/packages/components/ui/badge";
-import { Button } from "@/packages/components/ui/button";
 import { useRecordings } from "@/packages/lib/recordings-context";
 import { useColors } from "@/packages/hooks/use-colors";
 import { useResponsive } from "@/packages/hooks/use-responsive";
-import { Recording } from "@/packages/types/recording";
 import { useTranslation } from "@/packages/lib/i18n/context";
 
 export default function HomeScreen() {
