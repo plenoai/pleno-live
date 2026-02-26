@@ -141,12 +141,7 @@ export class RealtimeTranscriptionClient {
       commit,
     };
 
-    try {
-      this.ws.send(JSON.stringify(message));
-    } catch (error) {
-      console.error("[RealtimeClient] Failed to send audio chunk:", error);
-      this.emit("error", { message: "Failed to send audio chunk" });
-    }
+    this.ws.send(JSON.stringify(message));
   }
 
   /**
@@ -164,12 +159,7 @@ export class RealtimeTranscriptionClient {
       commit: true,
     };
 
-    try {
-      this.ws.send(JSON.stringify(message));
-    } catch (error) {
-      console.error("[RealtimeClient] Failed to commit:", error);
-      this.emit("error", { message: "Failed to commit" });
-    }
+    this.ws.send(JSON.stringify(message));
   }
 
   /**
@@ -271,11 +261,7 @@ export class RealtimeTranscriptionClient {
   private emit(event: RealtimeEvent, data: any): void {
     const handler = this.eventHandlers.get(event);
     if (handler) {
-      try {
-        handler(data);
-      } catch (error) {
-        console.error(`[RealtimeClient] Error in ${event} handler:`, error);
-      }
+      handler(data);
     }
   }
 }

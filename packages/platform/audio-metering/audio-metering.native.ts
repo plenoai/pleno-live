@@ -7,31 +7,36 @@ import { ExpoPlayAudioStream } from '@mykin-ai/expo-audio-stream';
 import type { AudioMeteringConfig, AudioMeteringController } from './index';
 
 /**
+ * Base64 文字列が有効かを事前チェック
+ */
+function isValidBase64(str: string): boolean {
+  return str.length > 0 && str.length % 4 === 0 && /^[A-Za-z0-9+/]+=*$/.test(str);
+}
+
+/**
  * Base64 PCM データから RMS を計算
  */
 function calculateRmsFromBase64(base64Data: string): number {
-  try {
-    const binaryString = atob(base64Data);
-    const len = binaryString.length;
+  if (!isValidBase64(base64Data)) return 0;
 
-    let sumSquares = 0;
-    let sampleCount = 0;
+  const binaryString = atob(base64Data);
+  const len = binaryString.length;
 
-    for (let i = 0; i < len - 1; i += 2) {
-      const low = binaryString.charCodeAt(i);
-      const high = binaryString.charCodeAt(i + 1);
-      let sample = (high << 8) | low;
-      if (sample >= 32768) sample -= 65536;
-      const normalizedSample = sample / 32768;
-      sumSquares += normalizedSample * normalizedSample;
-      sampleCount++;
-    }
+  let sumSquares = 0;
+  let sampleCount = 0;
 
-    if (sampleCount === 0) return 0;
-    return Math.sqrt(sumSquares / sampleCount);
-  } catch {
-    return 0;
+  for (let i = 0; i < len - 1; i += 2) {
+    const low = binaryString.charCodeAt(i);
+    const high = binaryString.charCodeAt(i + 1);
+    let sample = (high << 8) | low;
+    if (sample >= 32768) sample -= 65536;
+    const normalizedSample = sample / 32768;
+    sumSquares += normalizedSample * normalizedSample;
+    sampleCount++;
   }
+
+  if (sampleCount === 0) return 0;
+  return Math.sqrt(sumSquares / sampleCount);
 }
 
 /**

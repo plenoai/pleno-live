@@ -394,12 +394,7 @@ JSON形式で以下のように出力してください:
             : String(content);
           const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
           const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(jsonStr);
-          } catch {
-            throw new Error(`LLMが不正なJSONを返しました: ${jsonStr.slice(0, 100)}`);
-          }
+          const parsed: unknown = JSON.parse(jsonStr);
 
           // Validate and format response
           const tags = Array.isArray(parsed)
@@ -480,12 +475,7 @@ JSON形式で以下のように出力してください:
             : String(content);
           const jsonMatch = contentStr.match(/\[[\s\S]*\]/);
           const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(jsonStr);
-          } catch {
-            throw new Error(`LLMが不正なJSONを返しました: ${jsonStr.slice(0, 100)}`);
-          }
+          const parsed: unknown = JSON.parse(jsonStr);
 
           // Validate and format response
           const items = Array.isArray(parsed)
@@ -578,16 +568,11 @@ JSON形式で以下のように出力してください:
             : String(content);
           const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
           const jsonStr = jsonMatch ? jsonMatch[0] : contentStr;
-          let parsed: Record<string, unknown>;
-          try {
-            const raw = JSON.parse(jsonStr);
-            if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-              throw new Error("オブジェクト形式ではありません");
-            }
-            parsed = raw as Record<string, unknown>;
-          } catch {
-            throw new Error(`LLMが不正なJSONを返しました: ${jsonStr.slice(0, 100)}`);
+          const raw = JSON.parse(jsonStr);
+          if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+            throw new Error(`LLMが不正なJSONを返しました: オブジェクト形式ではありません (${jsonStr.slice(0, 100)})`);
           }
+          const parsed = raw as Record<string, unknown>;
 
           // Validate and format response
           const score = Math.min(1, Math.max(-1, Number(parsed.score) || 0));
@@ -754,83 +739,77 @@ JSON形式で以下のように出力してください:
         }).optional(),
       }))
       .mutation(async ({ input }) => {
-        try {
-          let markdown = `# ${input.title}\n\n`;
-          markdown += `**Record ID:** ${input.recordingId}\n\n`;
-          markdown += `---\n\n`;
+        let markdown = `# ${input.title}\n\n`;
+        markdown += `**Record ID:** ${input.recordingId}\n\n`;
+        markdown += `---\n\n`;
 
-          // Summary section
-          if (input.summary) {
-            markdown += `## 要約\n\n`;
-            markdown += `**概要:** ${input.summary.overview}\n\n`;
+        // Summary section
+        if (input.summary) {
+          markdown += `## 要約\n\n`;
+          markdown += `**概要:** ${input.summary.overview}\n\n`;
 
-            if (input.summary.keyPoints.length > 0) {
-              markdown += `**重要なポイント:**\n`;
-              input.summary.keyPoints.forEach(point => {
-                markdown += `- ${point}\n`;
-              });
-              markdown += `\n`;
-            }
-          }
-
-          // Sentiment section
-          if (input.sentiment) {
-            markdown += `## 感情分析\n\n`;
-            markdown += `**総合感情:** ${input.sentiment.overallSentiment}\n`;
-            markdown += `**詳細:** ${input.sentiment.summary}\n\n`;
-          }
-
-          // Keywords section
-          if (input.keywords && input.keywords.length > 0) {
-            markdown += `## キーワード\n\n`;
-            input.keywords.forEach(kw => {
-              markdown += `- **${kw.text}** (重要度: ${kw.importance}, 出現数: ${kw.frequency})\n`;
+          if (input.summary.keyPoints.length > 0) {
+            markdown += `**重要なポイント:**\n`;
+            input.summary.keyPoints.forEach(point => {
+              markdown += `- ${point}\n`;
             });
             markdown += `\n`;
           }
-
-          // Tags section
-          if (input.tags && input.tags.length > 0) {
-            markdown += `## タグ\n\n`;
-            markdown += input.tags.map(t => `\`${t.name}\``).join(`, `);
-            markdown += `\n\n`;
-          }
-
-          // Action Items section
-          if (input.actionItems && input.actionItems.length > 0) {
-            markdown += `## アクションアイテム\n\n`;
-            input.actionItems.forEach(item => {
-              const checkbox = item.completed ? '✓' : '☐';
-              markdown += `- [${checkbox}] ${item.text} (優先度: ${item.priority})\n`;
-            });
-            markdown += `\n`;
-          }
-
-          // Transcript section
-          if (input.transcript) {
-            markdown += `## 文字起こし\n\n`;
-            if (input.transcript.segments.length > 0) {
-              input.transcript.segments.forEach(seg => {
-                const speaker = seg.speaker ? `**${seg.speaker}:** ` : '';
-                markdown += `${speaker}${seg.text}\n\n`;
-              });
-            } else {
-              markdown += `${input.transcript.text}\n`;
-            }
-          }
-
-          markdown += `\n---\n`;
-          markdown += `*エクスポート日時: ${new Date().toLocaleString('ja-JP')}*\n`;
-
-          return {
-            markdown,
-            filename: `${input.title.replace(/[\/\\:*?"<>|]/g, '_')}.md`,
-          };
-        } catch (error) {
-          console.error("[TRPC] Export markdown error:", error);
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
-          throw new Error(`Markdownエクスポートに失敗しました: ${errorMessage}`);
         }
+
+        // Sentiment section
+        if (input.sentiment) {
+          markdown += `## 感情分析\n\n`;
+          markdown += `**総合感情:** ${input.sentiment.overallSentiment}\n`;
+          markdown += `**詳細:** ${input.sentiment.summary}\n\n`;
+        }
+
+        // Keywords section
+        if (input.keywords && input.keywords.length > 0) {
+          markdown += `## キーワード\n\n`;
+          input.keywords.forEach(kw => {
+            markdown += `- **${kw.text}** (重要度: ${kw.importance}, 出現数: ${kw.frequency})\n`;
+          });
+          markdown += `\n`;
+        }
+
+        // Tags section
+        if (input.tags && input.tags.length > 0) {
+          markdown += `## タグ\n\n`;
+          markdown += input.tags.map(t => `\`${t.name}\``).join(`, `);
+          markdown += `\n\n`;
+        }
+
+        // Action Items section
+        if (input.actionItems && input.actionItems.length > 0) {
+          markdown += `## アクションアイテム\n\n`;
+          input.actionItems.forEach(item => {
+            const checkbox = item.completed ? '✓' : '☐';
+            markdown += `- [${checkbox}] ${item.text} (優先度: ${item.priority})\n`;
+          });
+          markdown += `\n`;
+        }
+
+        // Transcript section
+        if (input.transcript) {
+          markdown += `## 文字起こし\n\n`;
+          if (input.transcript.segments.length > 0) {
+            input.transcript.segments.forEach(seg => {
+              const speaker = seg.speaker ? `**${seg.speaker}:** ` : '';
+              markdown += `${speaker}${seg.text}\n\n`;
+            });
+          } else {
+            markdown += `${input.transcript.text}\n`;
+          }
+        }
+
+        markdown += `\n---\n`;
+        markdown += `*エクスポート日時: ${new Date().toLocaleString('ja-JP')}*\n`;
+
+        return {
+          markdown,
+          filename: `${input.title.replace(/[\/\\:*?"<>|]/g, '_')}.md`,
+        };
       }),
 
     // Phase 3 P3: Import recording metadata from CSV or JSON files
@@ -841,153 +820,147 @@ JSON形式で以下のように出力してください:
         title: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        try {
-          let recordings: Array<{
-            title: string;
-            notes?: string;
-            tags?: Array<{ name: string; color?: string }>;
-            actionItems?: Array<{
-              text: string;
-              priority: 'high' | 'medium' | 'low';
-              completed?: boolean;
-            }>;
-            keywords?: Array<{
-              text: string;
-              importance: 'high' | 'medium' | 'low';
-              frequency?: number;
-            }>;
-          }> = [];
+        let recordings: Array<{
+          title: string;
+          notes?: string;
+          tags?: Array<{ name: string; color?: string }>;
+          actionItems?: Array<{
+            text: string;
+            priority: 'high' | 'medium' | 'low';
+            completed?: boolean;
+          }>;
+          keywords?: Array<{
+            text: string;
+            importance: 'high' | 'medium' | 'low';
+            frequency?: number;
+          }>;
+        }> = [];
 
-          if (input.format === "json") {
-            // Parse JSON format
-            try {
-              const parsed = JSON.parse(input.data);
-              recordings = Array.isArray(parsed) ? parsed : [parsed];
-            } catch (e) {
-              throw new Error("JSONの解析に失敗しました。正しいJSON形式で入力してください。");
-            }
-          } else if (input.format === "csv") {
-            // Parse CSV format (simple implementation)
-            const lines = input.data.trim().split('\n');
-            if (lines.length < 2) {
-              throw new Error("CSVに有効なデータが含まれていません。");
-            }
-
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-            const titleIndex = headers.indexOf('title');
-            const notesIndex = headers.indexOf('notes');
-            const tagsIndex = headers.indexOf('tags');
-            const actionItemsIndex = headers.indexOf('actionitems');
-            const keywordsIndex = headers.indexOf('keywords');
-
-            if (titleIndex === -1) {
-              throw new Error("CSVに'title'列が必要です。");
-            }
-
-            for (let i = 1; i < lines.length; i++) {
-              if (!lines[i].trim()) continue;
-
-              const values = lines[i].split(',').map(v => v.trim());
-              const recording: typeof recordings[0] = {
-                title: values[titleIndex] || `インポート ${i}`,
-              };
-
-              if (notesIndex !== -1 && values[notesIndex]) {
-                recording.notes = values[notesIndex];
-              }
-
-              // Parse tags (format: "tag1|tag2|tag3")
-              if (tagsIndex !== -1 && values[tagsIndex]) {
-                recording.tags = values[tagsIndex]
-                  .split('|')
-                  .map(tag => ({
-                    name: tag.trim(),
-                  }))
-                  .filter(tag => tag.name.length > 0);
-              }
-
-              // Parse action items (format: "item1:high|item2:medium")
-              if (actionItemsIndex !== -1 && values[actionItemsIndex]) {
-                recording.actionItems = values[actionItemsIndex]
-                  .split('|')
-                  .map(item => {
-                    const [text, priority] = item.split(':');
-                    return {
-                      text: text?.trim() || '',
-                      priority: (priority?.trim().toLowerCase() as any) || 'medium',
-                      completed: false,
-                    };
-                  })
-                  .filter(item => item.text.length > 0);
-              }
-
-              // Parse keywords (format: "keyword1:high|keyword2:medium")
-              if (keywordsIndex !== -1 && values[keywordsIndex]) {
-                recording.keywords = values[keywordsIndex]
-                  .split('|')
-                  .map(kw => {
-                    const [text, importance] = kw.split(':');
-                    return {
-                      text: text?.trim() || '',
-                      importance: (importance?.trim().toLowerCase() as any) || 'medium',
-                      frequency: 1,
-                    };
-                  })
-                  .filter(kw => kw.text.length > 0);
-              }
-
-              recordings.push(recording);
-            }
+        if (input.format === "json") {
+          // Parse JSON format
+          try {
+            const parsed = JSON.parse(input.data);
+            recordings = Array.isArray(parsed) ? parsed : [parsed];
+          } catch {
+            throw new Error("JSONの解析に失敗しました。正しいJSON形式で入力してください。");
+          }
+        } else if (input.format === "csv") {
+          // Parse CSV format (simple implementation)
+          const lines = input.data.trim().split('\n');
+          if (lines.length < 2) {
+            throw new Error("CSVに有効なデータが含まれていません。");
           }
 
-          // Validate and normalize imported data
-          const importedRecordings = recordings.map((rec, idx) => ({
-            id: `imported_${Date.now()}_${idx}`,
-            title: rec.title || `インポート ${idx + 1}`,
-            audioUri: '', // Will need to be filled in by user
-            duration: 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            highlights: [],
-            notes: rec.notes || '',
-            tags: (rec.tags || []).map((tag, i) => ({
-              id: `tag_${Date.now()}_${i}`,
-              name: tag.name,
-              color: tag.color,
-              isAutoGenerated: false,
-              confidence: 1,
-            })),
-            actionItems: (rec.actionItems || []).map((item, i) => ({
-              id: `action_${Date.now()}_${i}`,
-              text: item.text,
-              priority: item.priority as 'high' | 'medium' | 'low',
-              completed: item.completed || false,
-              isAutoGenerated: false,
-              confidence: 1,
-            })),
-            keywords: (rec.keywords || []).map((kw, i) => ({
-              id: `keyword_${Date.now()}_${i}`,
-              text: kw.text,
-              importance: kw.importance as 'high' | 'medium' | 'low',
-              confidence: 1,
-              frequency: kw.frequency || 1,
-              startIndex: 0,
-            })),
-            qaHistory: [],
-            status: 'saved' as const,
-          }));
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+          const titleIndex = headers.indexOf('title');
+          const notesIndex = headers.indexOf('notes');
+          const tagsIndex = headers.indexOf('tags');
+          const actionItemsIndex = headers.indexOf('actionitems');
+          const keywordsIndex = headers.indexOf('keywords');
 
-          return {
-            success: true,
-            count: importedRecordings.length,
-            recordings: importedRecordings,
-            message: `${importedRecordings.length}件の録音メタデータをインポートしました。`,
-          };
-        } catch (error) {
-          console.error("[TRPC] Import recording error:", error);
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
-          throw new Error(`ファイルインポートに失敗しました: ${errorMessage}`);
+          if (titleIndex === -1) {
+            throw new Error("CSVに'title'列が必要です。");
+          }
+
+          for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+
+            const values = lines[i].split(',').map(v => v.trim());
+            const recording: typeof recordings[0] = {
+              title: values[titleIndex] || `インポート ${i}`,
+            };
+
+            if (notesIndex !== -1 && values[notesIndex]) {
+              recording.notes = values[notesIndex];
+            }
+
+            // Parse tags (format: "tag1|tag2|tag3")
+            if (tagsIndex !== -1 && values[tagsIndex]) {
+              recording.tags = values[tagsIndex]
+                .split('|')
+                .map(tag => ({
+                  name: tag.trim(),
+                }))
+                .filter(tag => tag.name.length > 0);
+            }
+
+            // Parse action items (format: "item1:high|item2:medium")
+            if (actionItemsIndex !== -1 && values[actionItemsIndex]) {
+              recording.actionItems = values[actionItemsIndex]
+                .split('|')
+                .map(item => {
+                  const [text, priority] = item.split(':');
+                  return {
+                    text: text?.trim() || '',
+                    priority: (priority?.trim().toLowerCase() as any) || 'medium',
+                    completed: false,
+                  };
+                })
+                .filter(item => item.text.length > 0);
+            }
+
+            // Parse keywords (format: "keyword1:high|keyword2:medium")
+            if (keywordsIndex !== -1 && values[keywordsIndex]) {
+              recording.keywords = values[keywordsIndex]
+                .split('|')
+                .map(kw => {
+                  const [text, importance] = kw.split(':');
+                  return {
+                    text: text?.trim() || '',
+                    importance: (importance?.trim().toLowerCase() as any) || 'medium',
+                    frequency: 1,
+                  };
+                })
+                .filter(kw => kw.text.length > 0);
+            }
+
+            recordings.push(recording);
+          }
         }
+
+        // Validate and normalize imported data
+        const importedRecordings = recordings.map((rec, idx) => ({
+          id: `imported_${Date.now()}_${idx}`,
+          title: rec.title || `インポート ${idx + 1}`,
+          audioUri: '', // Will need to be filled in by user
+          duration: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          highlights: [],
+          notes: rec.notes || '',
+          tags: (rec.tags || []).map((tag, i) => ({
+            id: `tag_${Date.now()}_${i}`,
+            name: tag.name,
+            color: tag.color,
+            isAutoGenerated: false,
+            confidence: 1,
+          })),
+          actionItems: (rec.actionItems || []).map((item, i) => ({
+            id: `action_${Date.now()}_${i}`,
+            text: item.text,
+            priority: item.priority as 'high' | 'medium' | 'low',
+            completed: item.completed || false,
+            isAutoGenerated: false,
+            confidence: 1,
+          })),
+          keywords: (rec.keywords || []).map((kw, i) => ({
+            id: `keyword_${Date.now()}_${i}`,
+            text: kw.text,
+            importance: kw.importance as 'high' | 'medium' | 'low',
+            confidence: 1,
+            frequency: kw.frequency || 1,
+            startIndex: 0,
+          })),
+          qaHistory: [],
+          status: 'saved' as const,
+        }));
+
+        return {
+          success: true,
+          count: importedRecordings.length,
+          recordings: importedRecordings,
+          message: `${importedRecordings.length}件の録音メタデータをインポートしました。`,
+        };
       }),
   }),
 });
