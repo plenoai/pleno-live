@@ -14,6 +14,8 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v4
 
@@ -24,18 +26,64 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Type check
         run: pnpm check
 
+      - name: Load env from eas.json
+        run: |
+          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> $GITHUB_ENV
+
+      - name: Expo prebuild
+        run: npx expo prebuild --platform android --clean
+
+      - name: Configure Android build
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          # arm64-v8aのみ・R8 minify有効・gif/webp無効でサイズ最小化
+          # configuration-cache はReact Nativeのnodeプロセス呼び出しと非互換のため無効
+          cat >> android/gradle.properties << 'EOF'
+          reactNativeArchitectures=arm64-v8a
+          android.enableMinifyInReleaseBuilds=true
+          expo.gif.enabled=false
+          expo.webp.enabled=false
+          EOF
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
+
+      - name: Build release APK
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g"
+        run: |
+          cd android
+          ./gradlew assembleRelease \
+            --build-cache \
+            --parallel \
+            -x lint \
+            -x lintRelease
+
       - name: Get version
         id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          SHORT_SHA=$(git rev-parse --short HEAD)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION-$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "apk=pleno-live-$VERSION.apk" >> $GITHUB_OUTPUT
+
+      - name: Rename APK
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk \
+             ${{ steps.version.outputs.apk }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -44,13 +92,7 @@ jobs:
           name: Release ${{ steps.version.outputs.tag }}
           generate_release_notes: true
           make_latest: true
-          body: |
-            ## Release ${{ steps.version.outputs.tag }}
-
-            APKはローカルビルドで作成してください:
-            ```bash
-            eas build --platform android --profile preview --local
-            ```
+          files: ${{ steps.version.outputs.apk }}
 
       - name: Cleanup old releases
         env:

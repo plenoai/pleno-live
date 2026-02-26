@@ -32,6 +32,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Type check
+        run: pnpm check
+
+      - name: Load env from eas.json
+        run: |
+          jq -r '.build.preview.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> $GITHUB_ENV
+
       - name: Expo prebuild
         run: npx expo prebuild --platform android --clean
 
@@ -90,6 +97,7 @@ jobs:
           name: Preview ${{ steps.meta.outputs.sha }}
           prerelease: true
           make_latest: false
+          generate_release_notes: true
           body: |
             **Preview build** — `${{ steps.meta.outputs.sha }}`
 
