@@ -19,7 +19,7 @@ function createApp() {
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     // Mobile app requests have no origin; web requests must match allowlist
-    if (origin && (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin))) {
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header("Access-Control-Allow-Credentials", "true");
     }

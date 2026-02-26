@@ -1,7 +1,7 @@
 # ECR repository for custom CodeBuild runner image (Android SDK pre-installed)
 resource "aws_ecr_repository" "runner" {
   name                 = "pleno-live-runner"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = true
 
   image_scanning_configuration {

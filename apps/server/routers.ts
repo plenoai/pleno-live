@@ -27,11 +27,7 @@ export const appRouter = router({
         provider: z.enum(["elevenlabs", "gemini"]).default("elevenlabs"),
       }))
       .mutation(async ({ input }) => {
-        console.log("[TRPC] transcribe mutation called");
-        console.log("[TRPC] provider:", input.provider);
-        console.log("[TRPC] filename:", input.filename);
-        console.log("[TRPC] audioBase64 length:", input.audioBase64?.length || 0);
-        console.log("[TRPC] audioUrl:", input.audioUrl || "none");
+        console.log("[TRPC] transcribe mutation called, provider:", input.provider);
 
         try {
           // Gemini provider
@@ -269,8 +265,6 @@ ${input.transcriptText}`,
       }))
       .mutation(async ({ input }) => {
         console.log("[TRPC] translate mutation called");
-        console.log("[TRPC] target language:", input.targetLanguage);
-        console.log("[TRPC] texts count:", input.texts.length);
 
         const languageNames: Record<string, string> = {
           en: "English",

@@ -49,7 +49,7 @@ locals {
 # ECR Repository
 resource "aws_ecr_repository" "api" {
   name                 = local.function_name
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = true
 
   image_scanning_configuration {
@@ -113,6 +113,11 @@ resource "aws_apigatewayv2_stage" "api" {
   api_id      = aws_apigatewayv2_api.api.id
   name        = "$default"
   auto_deploy = true
+
+  default_route_settings {
+    throttling_burst_limit = 50
+    throttling_rate_limit  = 30
+  }
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway.arn

@@ -43,7 +43,7 @@ jobs:
 
       - name: Load env from eas.json
         run: |
-          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> $GITHUB_ENV
+          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("\n"; "") | gsub("\r"; ""))"' eas.json >> $GITHUB_ENV
 
       - name: Expo prebuild
         run: npx expo prebuild --platform android --clean

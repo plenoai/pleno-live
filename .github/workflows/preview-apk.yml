@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,7 +41,7 @@ jobs:
 
       - name: Load env from eas.json
         run: |
-          jq -r '.build.preview.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> $GITHUB_ENV
+          jq -r '.build.preview.env | to_entries[] | "\(.key)=\(.value | gsub("\n"; "") | gsub("\r"; ""))"' eas.json >> $GITHUB_ENV
 
       - name: Expo prebuild
         run: npx expo prebuild --platform android --clean
