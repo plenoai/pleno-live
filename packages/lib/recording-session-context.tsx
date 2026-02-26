@@ -10,7 +10,7 @@ import { useRealtimeTranslation } from '@/packages/hooks/use-realtime-translatio
 import { useBackgroundRecording } from '@/packages/hooks/use-background-recording';
 import { useRecordingDraft } from '@/packages/hooks/use-recording-draft';
 import { Recording, Highlight, RecordingDraft } from '@/packages/types/recording';
-import type { TranslationStatus } from '@/packages/types/realtime-transcription';
+import type { TranslationStatus, TranscriptSegment } from '@/packages/types/realtime-transcription';
 import { Haptics, FileSystem, Permissions, createAudioMetering, type AudioMeteringController } from '@/packages/platform';
 import { SystemAudioStream, type AudioSource } from './system-audio-stream';
 
@@ -79,6 +79,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
   // auto-saveのステールクロージャを防ぐためのref
   const durationRef = useRef(0);
   const highlightsRef = useRef<Highlight[]>([]);
+  const realtimeSegmentsRef = useRef<TranscriptSegment[]>([]);
   const fullMeteringHistoryRef = useRef<number[]>([]);
 
   const audioRecorder = useAudioRecorder(RECORDING_OPTIONS);
@@ -116,6 +117,12 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
   // Auto-save draft hook
   const { startAutoSave, stopAutoSave, loadDraft, clearDraft } = useRecordingDraft();
 
+  // Ref を最新の state に同期（startAutoSave ステールクロージャ対策）
+  useEffect(() => { durationRef.current = duration; }, [duration]);
+  useEffect(() => { highlightsRef.current = highlights; }, [highlights]);
+  useEffect(() => { realtimeSegmentsRef.current = realtimeState.segments; }, [realtimeState.segments]);
+  useEffect(() => { fullMeteringHistoryRef.current = fullMeteringHistory; }, [fullMeteringHistory]);
+
   // Audio metering effect
   useEffect(() => {
     // リアルタイムが有効な場合はsoundLevelを使用
@@ -151,11 +158,6 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
       }
     };
   }, [isRecording, isPaused, realtimeEnabled, realtimeSoundLevel]);
-
-  // auto-save用refを最新ステートと同期
-  useEffect(() => { durationRef.current = duration; }, [duration]);
-  useEffect(() => { highlightsRef.current = highlights; }, [highlights]);
-  useEffect(() => { fullMeteringHistoryRef.current = fullMeteringHistory; }, [fullMeteringHistory]);
 
   // 翻訳先言語が変わったらキャッシュをクリア
   useEffect(() => {
@@ -278,7 +280,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
         duration: durationRef.current,
         highlights: highlightsRef.current,
         realtimeEnabled,
-        realtimeSegments: realtimeState.segments,
+        realtimeSegments: realtimeSegmentsRef.current,
         meteringHistory: fullMeteringHistoryRef.current,
       }));
 
