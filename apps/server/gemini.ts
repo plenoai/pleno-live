@@ -57,11 +57,12 @@ export async function transcribeAudioWithGemini(
   console.log("[Gemini] Transcribing audio with mime type:", mimeType);
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${ENV.geminiApiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-goog-api-key": ENV.geminiApiKey,
       },
       body: JSON.stringify(payload),
     }

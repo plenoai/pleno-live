@@ -71,6 +71,11 @@ export const appRouter = router({
 
           // If base64 audio is provided, use it directly
           if (input.audioBase64) {
+            // base64はバイナリの約1.37倍サイズになるため、100MBバイナリ相当で制限
+            const MAX_BASE64_LENGTH = 100 * 1024 * 1024 * 1.37;
+            if (input.audioBase64.length > MAX_BASE64_LENGTH) {
+              throw new Error("音声ファイルが大きすぎます（上限100MB）");
+            }
             const audioBuffer = Buffer.from(input.audioBase64, "base64");
             result = await transcribeAudio(audioBuffer, input.filename, options);
           }

@@ -51,7 +51,6 @@ export async function transcribeAudio(
 ): Promise<TranscriptionResponse> {
   console.log("[ElevenLabs] transcribeAudio called with filename:", filename, "buffer size:", audioBuffer.length);
   const apiKey = getApiKey();
-  console.log("[ElevenLabs] API key:", apiKey ? `${apiKey.substring(0, 10)}...` : "NOT SET");
 
   const formData = new FormData();
 
