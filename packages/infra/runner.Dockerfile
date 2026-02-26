@@ -1,6 +1,15 @@
 # CodeBuild GitHub Actions Runner image with Android SDK pre-installed
-# ベース: CodeBuild standard:7.0 互換 (Ubuntu 22.04)
-FROM public.ecr.aws/codebuild/standard:7.0
+# ベース: Ubuntu 22.04 (CodeBuild Runner互換)
+FROM ubuntu:22.04
+
+# 基本ツール
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+    curl \
+    unzip \
+    git \
+    openjdk-17-jdk \
+    && rm -rf /var/lib/apt/lists/*
 
 # Android SDK バージョン
 ARG ANDROID_BUILD_TOOLS_VERSION=34.0.0
@@ -8,6 +17,7 @@ ARG ANDROID_PLATFORM_VERSION=34
 ARG CMDLINE_TOOLS_VERSION=11076708
 
 ENV ANDROID_SDK_ROOT=/opt/android-sdk
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH="${PATH}:${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools"
 
 # Android command-line tools のインストール
@@ -26,5 +36,3 @@ RUN yes | sdkmanager --licenses > /dev/null && \
 
 # Gradle wrapper キャッシュ用ディレクトリ
 RUN mkdir -p /root/.gradle
-
-# Node.js / pnpm は actions/setup-node で管理するため不要
