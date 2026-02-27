@@ -43,12 +43,6 @@ jobs:
       - name: Generate Storybook requires
         run: npx sb-rn-get-stories -c .rnstorybook
 
-      - name: Debug env
-        run: echo "HMAC length=${#EXPO_PUBLIC_APP_HMAC_SECRET} API_URL=${EXPO_PUBLIC_API_URL}"
-        env:
-          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
-          EXPO_PUBLIC_APP_HMAC_SECRET: ${{ secrets.APP_HMAC_SECRET }}
-
       - name: Build website
         run: npx expo export --platform web
         env:
