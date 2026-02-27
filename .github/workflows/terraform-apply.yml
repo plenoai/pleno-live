@@ -1,0 +1,51 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/infra/**'
+      - '.github/workflows/terraform-apply.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-1
+  TF_WORKING_DIR: packages/infra
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: |
+          terraform plan -out=tfplan \
+            -var="elevenlabs_api_key=${{ secrets.ELEVENLABS_API_KEY }}" \
+            -var="gemini_api_key=${{ secrets.GEMINI_API_KEY }}" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="app_hmac_secret=${{ secrets.APP_HMAC_SECRET }}" \
+            -var="github_token=${{ secrets.GH_PAT }}"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
