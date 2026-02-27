@@ -75,7 +75,7 @@ export default function NoteDetailScreen() {
   const colors = useColors();
   const { width: screenWidth } = useResponsive();
   const waveformBarCount = Math.floor((screenWidth - 72) / 8);
-  const { getRecording, updateRecording, setTranscript, setSummary, setAnalysis, addQAMessage, addHighlight } = useRecordings();
+  const { getRecording, updateRecording, setTranscript, setAnalysis, addQAMessage, addHighlight } = useRecordings();
   const { settings } = useSettings();
 
   const [activeTab, setActiveTab] = useState<TabType>("audio");
