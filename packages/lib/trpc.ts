@@ -5,7 +5,7 @@ import {
 } from "@trpc/client";
 import superjson from "superjson";
 import type { AppRouter } from "@/apps/server/routers";
-import { getSessionToken } from "@/packages/lib/auth";
+import { getSessionToken, resetAndReauth } from "@/packages/lib/auth";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -17,6 +17,21 @@ function authHeaders() {
 
 export const trpc = createTRPCReact<AppRouter>();
 
+async function fetchWithReauth(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
+  const res = await fetch(url, options);
+  if (res.status === 401) {
+    await resetAndReauth();
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...options?.headers,
+        ...authHeaders(),
+      },
+    });
+  }
+  return res;
+}
+
 export function createTRPCClient() {
   return trpc.createClient({
     links: [
@@ -24,6 +39,7 @@ export function createTRPCClient() {
         url: `${API_BASE_URL}/api/trpc`,
         transformer: superjson,
         headers: authHeaders,
+        fetch: fetchWithReauth,
       }),
     ],
   });
@@ -36,6 +52,7 @@ export function createVanillaTRPCClient() {
         url: `${API_BASE_URL}/api/trpc`,
         transformer: superjson,
         headers: authHeaders,
+        fetch: fetchWithReauth,
       }),
     ],
   });

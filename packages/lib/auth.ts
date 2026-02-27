@@ -184,3 +184,16 @@ export function getSessionToken(): string | null {
 export function isAuthInitialized(): boolean {
   return initialized;
 }
+
+export async function resetAndReauth(): Promise<void> {
+  sessionToken = null;
+  expiresAt = null;
+  initialized = false;
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+  await Storage.removeItem(STORE_KEY_SESSION_TOKEN);
+  await Storage.removeItem(STORE_KEY_EXPIRES_AT);
+  await initializeAuth();
+}
