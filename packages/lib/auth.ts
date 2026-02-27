@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
-import { SignJWT } from "jose";
 
 const STORE_KEY_SESSION_TOKEN = "auth.sessionToken";
 const STORE_KEY_EXPIRES_AT = "auth.expiresAt";
@@ -17,7 +17,7 @@ type TRPCClient = {
     };
     verifyAttestation: {
       mutate: (input: {
-        responseToken: string;
+        responseHash: string;
         challengeToken: string;
         platform: string;
         deviceId: string;
@@ -112,13 +112,11 @@ async function storeSession(token: string, expiry: number): Promise<void> {
   expiresAt = expiry;
 }
 
-async function signChallengeResponse(nonce: string): Promise<string> {
-  const secret = new TextEncoder().encode(APP_HMAC_SECRET);
-
-  return new SignJWT({ nonce })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .sign(secret);
+async function computeResponseHash(nonce: string): Promise<string> {
+  return Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    APP_HMAC_SECRET + ":" + nonce,
+  );
 }
 
 async function performAuthFlow(): Promise<void> {
@@ -132,10 +130,10 @@ async function performAuthFlow(): Promise<void> {
   const { nonce, challengeToken } =
     await trpcClientRef.auth.createChallenge.mutate();
 
-  const responseToken = await signChallengeResponse(nonce);
+  const responseHash = await computeResponseHash(nonce);
 
   const result = await trpcClientRef.auth.verifyAttestation.mutate({
-    responseToken,
+    responseHash,
     challengeToken,
     platform: Platform.OS,
     deviceId,

@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import { createHash, timingSafeEqual, randomBytes } from "crypto";
 
 const CHALLENGE_TTL = "5m";
 const ALGORITHM = "HS256";
@@ -11,20 +12,8 @@ function getChallengeSecret(): Uint8Array {
   return new TextEncoder().encode(raw);
 }
 
-function getAppHmacSecret(): Uint8Array {
-  const raw = process.env.APP_HMAC_SECRET;
-  if (!raw || raw.length < 32) {
-    throw new Error("APP_HMAC_SECRET must be at least 32 bytes");
-  }
-  return new TextEncoder().encode(raw);
-}
-
 function generateNonce(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return randomBytes(32).toString("hex");
 }
 
 type ChallengeResult = {
@@ -46,7 +35,7 @@ export async function createChallenge(): Promise<ChallengeResult> {
 
 export async function verifyClientResponse(
   challengeToken: string,
-  responseToken: string,
+  responseHash: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const challengeResult = await jwtVerify(challengeToken, getChallengeSecret(), {
     algorithms: [ALGORITHM],
@@ -56,22 +45,31 @@ export async function verifyClientResponse(
     return { ok: false, error: "Invalid or expired challenge token" };
   }
 
-  const expectedNonce = challengeResult.payload.nonce;
-  if (typeof expectedNonce !== "string") {
+  const nonce = challengeResult.payload.nonce;
+  if (typeof nonce !== "string") {
     return { ok: false, error: "Challenge token missing nonce" };
   }
 
-  const responseResult = await jwtVerify(responseToken, getAppHmacSecret(), {
-    algorithms: [ALGORITHM],
-  }).catch(() => null);
-
-  if (!responseResult) {
-    return { ok: false, error: "Invalid response signature" };
+  const secret = process.env.APP_HMAC_SECRET;
+  if (!secret || secret.length < 32) {
+    return { ok: false, error: "Server misconfigured" };
   }
 
-  const responseNonce = responseResult.payload.nonce;
-  if (responseNonce !== expectedNonce) {
-    return { ok: false, error: "Nonce mismatch" };
+  const expected = createHash("sha256")
+    .update(secret + ":" + nonce)
+    .digest("hex");
+
+  if (expected.length !== responseHash.length) {
+    return { ok: false, error: "Invalid response" };
+  }
+
+  const isValid = timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(responseHash),
+  );
+
+  if (!isValid) {
+    return { ok: false, error: "Invalid response" };
   }
 
   return { ok: true };

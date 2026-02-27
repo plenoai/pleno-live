@@ -21,13 +21,13 @@ const authRouter = router({
 
   verifyAttestation: publicProcedure
     .input(z.object({
-      responseToken: z.string(),
+      responseHash: z.string(),
       challengeToken: z.string(),
       platform: z.string(),
       deviceId: z.string(),
     }))
     .mutation(async ({ input }) => {
-      const result = await verifyClientResponse(input.challengeToken, input.responseToken);
+      const result = await verifyClientResponse(input.challengeToken, input.responseHash);
       if (!result.ok) {
         return { success: false as const, error: result.error, sessionToken: null, expiresAt: 0 };
       }
