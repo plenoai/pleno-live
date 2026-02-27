@@ -32,9 +32,10 @@ jobs:
         env:
           IMAGE: ${{ steps.ecr-login.outputs.registry }}/pleno-live-runner
         run: |
+          IMAGE_TAG=$(git rev-parse --short HEAD)
           docker build \
             -f packages/infra/runner.Dockerfile \
-            -t $IMAGE:latest \
+            -t $IMAGE:$IMAGE_TAG \
             packages/infra/
-          docker push $IMAGE:latest
-          echo "Image pushed: $IMAGE:latest"
+          docker push $IMAGE:$IMAGE_TAG
+          echo "Image pushed: $IMAGE:$IMAGE_TAG"
