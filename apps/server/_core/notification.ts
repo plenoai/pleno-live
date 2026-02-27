@@ -1,5 +1,7 @@
 import { TRPCError } from "@trpc/server";
-import { ENV } from "./env";
+
+const FORGE_API_URL = process.env.BUILT_IN_FORGE_API_URL ?? "";
+const FORGE_API_KEY = process.env.BUILT_IN_FORGE_API_KEY ?? "";
 
 export type NotificationPayload = {
   title: string;
@@ -61,28 +63,28 @@ const validatePayload = (input: NotificationPayload): NotificationPayload => {
 export async function notifyOwner(payload: NotificationPayload): Promise<boolean> {
   const { title, content } = validatePayload(payload);
 
-  if (!ENV.forgeApiUrl) {
+  if (!FORGE_API_URL) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Notification service URL is not configured.",
     });
   }
 
-  if (!ENV.forgeApiKey) {
+  if (!FORGE_API_KEY) {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Notification service API key is not configured.",
     });
   }
 
-  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
+  const endpoint = buildEndpointUrl(FORGE_API_URL);
 
   try {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         accept: "application/json",
-        authorization: `Bearer ${ENV.forgeApiKey}`,
+        authorization: `Bearer ${FORGE_API_KEY}`,
         "content-type": "application/json",
         "connect-protocol-version": "1",
       },

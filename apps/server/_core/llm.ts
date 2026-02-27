@@ -203,25 +203,17 @@ const normalizeToolChoice = (
 };
 
 const resolveApiUrl = () => {
-  // Use Gemini API if key is available
-  if (ENV.geminiApiKey) {
-    return "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-  }
-
-  // Fallback to Forge API
-  return ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+  return "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 };
 
 const assertApiKey = () => {
-  if (!ENV.geminiApiKey && !ENV.forgeApiKey) {
-    throw new Error("GEMINI_API_KEY or BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.geminiApiKey) {
+    throw new Error("GEMINI_API_KEY is not configured");
   }
 };
 
 const getApiKey = () => {
-  return ENV.geminiApiKey || ENV.forgeApiKey;
+  return ENV.geminiApiKey;
 };
 
 const normalizeResponseFormat = ({
@@ -278,11 +270,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
-  // Use Gemini model if Gemini API key is set, otherwise use the specified model
-  const defaultModel = ENV.geminiApiKey ? "gemini-2.5-flash-lite" : "openai/gpt-5-mini";
-
   const payload: Record<string, unknown> = {
-    model: params.model || defaultModel,
+    model: params.model || "gemini-2.5-flash-lite",
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,13 +285,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   payload.max_tokens = params.maxTokens || params.max_tokens || 32768;
-
-  // Only add thinking parameter for non-Gemini APIs
-  if (!ENV.geminiApiKey) {
-    payload.thinking = {
-      budget_tokens: 128,
-    };
-  }
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
