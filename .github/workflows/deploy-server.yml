@@ -17,8 +17,8 @@ permissions:
 
 env:
   AWS_REGION: ap-northeast-1
-  ECR_REPOSITORY: pleno-live-api-prod
-  LAMBDA_FUNCTION: pleno-live-api-prod
+  ECR_REPOSITORY: pleno-audit-api-prod
+  LAMBDA_FUNCTION: pleno-audit-api-prod
 
 jobs:
   deploy:
