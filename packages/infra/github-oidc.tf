@@ -60,6 +60,27 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
   })
 }
 
+resource "aws_iam_role_policy" "github_actions_lambda" {
+  name = "lambda-deploy"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "LambdaDeploy"
+        Effect = "Allow"
+        Action = [
+          "lambda:UpdateFunctionCode",
+          "lambda:GetFunction",
+          "lambda:GetFunctionConfiguration"
+        ]
+        Resource = aws_lambda_function.api.arn
+      }
+    ]
+  })
+}
+
 output "github_actions_role_arn" {
   value = aws_iam_role.github_actions.arn
 }
