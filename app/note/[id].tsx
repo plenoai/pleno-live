@@ -75,7 +75,7 @@ export default function NoteDetailScreen() {
   const colors = useColors();
   const { width: screenWidth } = useResponsive();
   const waveformBarCount = Math.floor((screenWidth - 72) / 8);
-  const { getRecording, updateRecording, setTranscript, setSummary, addQAMessage, addHighlight } = useRecordings();
+  const { getRecording, updateRecording, setTranscript, setSummary, setAnalysis, addQAMessage, addHighlight } = useRecordings();
   const { settings } = useSettings();
 
   const [activeTab, setActiveTab] = useState<TabType>("audio");
@@ -98,20 +98,16 @@ export default function NoteDetailScreen() {
   const player = useAudioPlayer(recording?.audioUri || "");
 
   // Track if auto-processing has been triggered to prevent duplicate calls
-  const autoProcessedRef = useRef<{ transcribe: boolean; summarize: boolean; keywords: boolean; sentiment: boolean }>({
+  const autoProcessedRef = useRef<{ transcribe: boolean; analyze: boolean }>({
     transcribe: false,
-    summarize: false,
-    keywords: false,
-    sentiment: false,
+    analyze: false,
   });
 
   // Reset auto-processed flags when recording changes
   useEffect(() => {
     autoProcessedRef.current = {
       transcribe: false,
-      summarize: false,
-      keywords: false,
-      sentiment: false,
+      analyze: false,
     };
   }, [recording?.id]);
 
@@ -130,55 +126,27 @@ export default function NoteDetailScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recording?.id, settings.autoTranscribe]);
 
-  // Auto summarize when transcription completes
+  // Auto analyze when transcription completes
   useEffect(() => {
     if (
-      settings.autoSummarize &&
+      settings.autoAnalyze &&
       recording &&
       recording.transcript &&
-      !recording.summary &&
+      !recording.analysis &&
       !isProcessing &&
-      !autoProcessedRef.current.summarize
+      !autoProcessedRef.current.analyze
     ) {
-      autoProcessedRef.current.summarize = true;
-      handleSummarize();
+      autoProcessedRef.current.analyze = true;
+      handleAnalyze();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recording?.transcript, settings.autoSummarize]);
-
-  // Auto keywords and sentiment when summary completes
-  useEffect(() => {
-    if (recording && recording.summary && recording.transcript) {
-      // Auto keywords extraction if enabled and not already extracted
-      if (
-        settings.autoKeywords &&
-        recording.keywords.length === 0 &&
-        !isProcessing &&
-        !autoProcessedRef.current.keywords
-      ) {
-        autoProcessedRef.current.keywords = true;
-        handleExtractKeywords();
-      }
-
-      // Auto sentiment analysis if enabled and not already analyzed
-      if (
-        settings.autoSentiment &&
-        !recording.sentiment &&
-        !isProcessing &&
-        !autoProcessedRef.current.sentiment
-      ) {
-        autoProcessedRef.current.sentiment = true;
-        handleAnalyzeSentiment();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recording?.summary, settings.autoKeywords, settings.autoSentiment]);
+  }, [recording?.transcript, settings.autoAnalyze]);
 
   // Transcription mutation
   const transcribeMutation = trpc.ai.transcribe.useMutation();
 
-  // Summary mutation
-  const summarizeMutation = trpc.ai.chat.useMutation();
+  // Analysis mutation (unified)
+  const analyzeMutation = trpc.ai.analyze.useMutation();
 
   // Q&A mutation
   const qaMutation = trpc.ai.askQuestion.useMutation();
@@ -356,43 +324,31 @@ export default function NoteDetailScreen() {
     }
   };
 
-const handleSummarize = async () => {
+  const handleAnalyze = async () => {
     if (!recording?.transcript) return;
     setIsProcessing(true);
-    updateRecording(recording.id, { status: "summarizing" });
+    updateRecording(recording.id, { status: "analyzing" });
 
     try {
-      const result = await summarizeMutation.mutateAsync({
-        message: `以下の文字起こしテキストを要約してください。概要、重要なポイント3つ、アクションアイテム（あれば）を箇条書きで出力してください：\n\n${recording.transcript.text}`,
+      const templateType = (recording.summaryTemplateType || settings.summaryTemplate || 'general') as 'general' | 'meeting' | 'interview' | 'lecture';
+      const result = await analyzeMutation.mutateAsync({
+        text: recording.transcript.text,
+        template: templateType,
       });
-      if (result.message) {
-        const lines = result.message.split("\n").filter((l: string) => l.trim());
-        setSummary(recording.id, {
-          overview: lines[0] || "",
-          keyPoints: lines.slice(1, 4),
-          actionItems: lines.slice(4, 7),
-          processedAt: new Date(),
-        });
-      }
 
-      // Auto-generate AI analysis after summarization (run in parallel)
-      const analysisPromises: Promise<void>[] = [];
-      if (recording.tags.length === 0) {
-        analysisPromises.push(handleGenerateTags());
-      }
-      if (recording.actionItems.length === 0) {
-        analysisPromises.push(handleExtractActionItems());
-      }
-      if (recording.keywords.length === 0) {
-        analysisPromises.push(handleExtractKeywords());
-      }
-      if (!recording.sentiment) {
-        analysisPromises.push(handleAnalyzeSentiment());
-      }
-      // Wait for all analysis tasks to complete
-      await Promise.allSettled(analysisPromises);
+      const analysis = {
+        overview: result.overview,
+        keyPoints: result.keyPoints,
+        tags: result.tags,
+        actionItems: result.actionItems,
+        keywords: result.keywords,
+        sentiment: result.sentiment,
+        processedAt: new Date(),
+      };
+
+      setAnalysis(recording.id, analysis);
     } catch (error) {
-      console.error("Summary error:", error);
+      console.error("Analysis error:", error);
       updateRecording(recording.id, { status: "transcribed" });
     } finally {
       setIsProcessing(false);
@@ -604,7 +560,11 @@ const handleSummarize = async () => {
             speaker: s.speaker,
           })),
         } : undefined,
-        summary: recording.summary ? {
+        summary: recording.analysis ? {
+          overview: recording.analysis.overview,
+          keyPoints: recording.analysis.keyPoints,
+          actionItems: [],
+        } : recording.summary ? {
           overview: recording.summary.overview,
           keyPoints: recording.summary.keyPoints,
           actionItems: recording.summary.actionItems,
@@ -731,7 +691,7 @@ const handleSummarize = async () => {
   const tabs: { key: TabType; label: string; icon: "waveform" | "doc.text.fill" | "star.fill" | "text.bubble.fill" }[] = [
     { key: "audio", label: "音声", icon: "waveform" },
     { key: "transcript", label: "文字起こし", icon: "doc.text.fill" },
-    { key: "summary", label: "要約", icon: "star.fill" },
+    { key: "summary", label: "分析", icon: "star.fill" },
     { key: "qa", label: "Q&A", icon: "text.bubble.fill" },
   ];
 
@@ -1061,12 +1021,12 @@ const handleSummarize = async () => {
 
           {activeTab === "summary" && (
             <View style={styles.summaryTab}>
-              {recording.summary ? (
+              {recording.analysis ? (
                 <>
                   <View style={styles.summarySection}>
                     <Text style={[styles.sectionTitle, { color: colors.foreground }]}>概要</Text>
                     <MarkdownText fontSize={15} lineHeight={24}>
-                      {recording.summary.overview}
+                      {recording.analysis.overview}
                     </MarkdownText>
                   </View>
 
@@ -1074,25 +1034,11 @@ const handleSummarize = async () => {
                     <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
                       重要なポイント
                     </Text>
-                    {recording.summary.keyPoints.map((point, i) => (
+                    {recording.analysis.keyPoints.map((point, i) => (
                       <View key={i} style={styles.bulletItem}>
                         <View style={[styles.bullet, { backgroundColor: colors.primary }]} />
                         <MarkdownText fontSize={15} lineHeight={24} style={{ flex: 1 }}>
                           {point}
-                        </MarkdownText>
-                      </View>
-                    ))}
-                  </View>
-
-                  <View style={styles.summarySection}>
-                    <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                      アクションアイテム
-                    </Text>
-                    {recording.summary.actionItems.map((item, i) => (
-                      <View key={i} style={styles.bulletItem}>
-                        <View style={[styles.bullet, { backgroundColor: colors.success }]} />
-                        <MarkdownText fontSize={15} lineHeight={24} style={{ flex: 1 }}>
-                          {item}
                         </MarkdownText>
                       </View>
                     ))}
@@ -1592,19 +1538,19 @@ const handleSummarize = async () => {
                   <IconSymbol name="star.fill" size={48} color={colors.muted} />
                   <Text style={[styles.emptyText, { color: colors.muted }]}>
                     {recording.transcript
-                      ? "要約がまだありません"
+                      ? "分析がまだありません"
                       : "まず文字起こしを行ってください"}
                   </Text>
                   {recording.transcript && (
                     <TouchableOpacity
-                      onPress={handleSummarize}
+                      onPress={handleAnalyze}
                       disabled={isProcessing}
                       style={[styles.actionButton, { backgroundColor: colors.primary }]}
                     >
                       {isProcessing ? (
                         <ActivityIndicator color="#FFFFFF" />
                       ) : (
-                        <Text style={styles.actionButtonText}>要約を生成</Text>
+                        <Text style={styles.actionButtonText}>分析を開始</Text>
                       )}
                     </TouchableOpacity>
                   )}

@@ -111,6 +111,16 @@ export interface Keyword {
   startIndex: number; // First occurrence in text
 }
 
+export interface Analysis {
+  overview: string;
+  keyPoints: string[];
+  tags: Tag[];
+  actionItems: ActionItem[];
+  keywords: Keyword[];
+  sentiment: SentimentAnalysis;
+  processedAt: Date;
+}
+
 export interface Recording {
   id: string;
   title: string;
@@ -123,12 +133,13 @@ export interface Recording {
   transcript?: Transcript;
   summary?: Summary;
   summaryTemplateType?: TemplateType;
+  analysis?: Analysis;
   tags: Tag[];
   actionItems: ActionItem[];
   sentiment?: SentimentAnalysis;
   keywords: Keyword[];
   qaHistory: QAMessage[];
-  status: 'recording' | 'saved' | 'transcribing' | 'transcribed' | 'summarizing' | 'summarized';
+  status: 'recording' | 'saved' | 'transcribing' | 'transcribed' | 'analyzing' | 'analyzed';
   /** リアルタイム文字起こし（録音中の一時データ） */
   realtimeTranscript?: {
     segments: RealtimeTranscriptSegment[];

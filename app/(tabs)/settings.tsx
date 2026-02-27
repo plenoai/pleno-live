@@ -113,7 +113,7 @@ export default function SettingsScreen() {
     updateSettings({ transcriptionProvider: provider });
   };
 
-  const handleToggle = (key: "autoTranscribe" | "autoSummarize" | "autoSentiment" | "autoKeywords") => {
+  const handleToggle = (key: "autoTranscribe" | "autoAnalyze") => {
     Haptics.impact('light');
     updateSettings({ [key]: !settings[key] });
   };
@@ -279,7 +279,7 @@ export default function SettingsScreen() {
 
   const totalDuration = recordingsState.recordings.reduce((sum, r) => sum + r.duration, 0);
   const transcribedCount = recordingsState.recordings.filter((r) => r.transcript).length;
-  const summarizedCount = recordingsState.recordings.filter((r) => r.summary).length;
+  const summarizedCount = recordingsState.recordings.filter((r) => r.analysis || r.summary).length;
 
   // 拡張統計
   const stats = useMemo(() => {
@@ -365,7 +365,7 @@ export default function SettingsScreen() {
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.secondary }]}>{summarizedCount}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>要約済</Text>
+              <Text style={[styles.statLabel, { color: colors.muted }]}>分析済</Text>
             </View>
           </View>
 
@@ -401,7 +401,7 @@ export default function SettingsScreen() {
                 <Text style={[styles.progressBarValue, { color: colors.foreground }]}>{stats.transcriptionRate}%</Text>
               </View>
               <View style={styles.progressBarRow}>
-                <Text style={[styles.progressBarLabel, { color: colors.muted }]}>要約</Text>
+                <Text style={[styles.progressBarLabel, { color: colors.muted }]}>分析</Text>
                 <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
                   <View
                     style={[
@@ -870,42 +870,14 @@ export default function SettingsScreen() {
           </View>
           <View style={styles.toggleRow}>
             <View style={styles.toggleContent}>
-              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>自動要約</Text>
+              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>自動分析</Text>
               <Text style={[styles.toggleDescription, { color: colors.muted }]}>
-                文字起こし完了後に自動で要約を生成
+                文字起こし完了後に要約・タグ・キーワード・感情分析を自動実行
               </Text>
             </View>
             <Switch
-              value={settings.autoSummarize}
-              onValueChange={() => handleToggle("autoSummarize")}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleContent}>
-              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>自動キーワード抽出</Text>
-              <Text style={[styles.toggleDescription, { color: colors.muted }]}>
-                要約完了後に自動でキーワードを抽出
-              </Text>
-            </View>
-            <Switch
-              value={settings.autoKeywords}
-              onValueChange={() => handleToggle("autoKeywords")}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleContent}>
-              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>自動感情分析</Text>
-              <Text style={[styles.toggleDescription, { color: colors.muted }]}>
-                要約完了後に自動で感情分析を実行
-              </Text>
-            </View>
-            <Switch
-              value={settings.autoSentiment}
-              onValueChange={() => handleToggle("autoSentiment")}
+              value={settings.autoAnalyze}
+              onValueChange={() => handleToggle("autoAnalyze")}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor="#FFFFFF"
             />

@@ -40,7 +40,7 @@
     "searchPlaceholder": "Search recordings...",
     "allNotes": "All",
     "transcribed": "Transcribed",
-    "summarized": "Summarized",
+    "summarized": "Analyzed",
     "emptyState": "No recordings yet",
     "duration": "Duration",
     "createdAt": "Created",
@@ -51,8 +51,8 @@
     "statusSaved": "Saved",
     "statusTranscribing": "Transcribing",
     "statusTranscribed": "Transcribed",
-    "statusSummarizing": "Summarizing",
-    "statusSummarized": "Summarized"
+    "statusAnalyzing": "Analyzing",
+    "statusAnalyzed": "Analyzed"
   },
   "settings": {
     "title": "Settings",
@@ -64,8 +64,8 @@
     "languageEnglish": "English",
     "autoTranscribe": "Auto Transcribe",
     "autoTranscribeDescription": "Automatically transcribe when recording completes",
-    "autoSummarize": "Auto Summarize",
-    "autoSummarizeDescription": "Automatically generate summary when transcription completes",
+    "autoAnalyze": "Auto Analyze",
+    "autoAnalyzeDescription": "Automatically run full analysis when transcription completes",
     "transcription": "Transcription Settings",
     "transcriptionProvider": "Provider",
     "realtimeTranscription": "Realtime Transcription",
