@@ -93,7 +93,7 @@ resource "aws_lambda_function" "api" {
   function_name = local.function_name
   role          = aws_iam_role.lambda.arn
   package_type  = "Image"
-  image_uri     = "${aws_ecr_repository.api.repository_url}:latest"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:initial"
   timeout       = 30
   memory_size   = 1024
 
