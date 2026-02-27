@@ -4,7 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - canary
+      - main
+    paths-ignore:
+      - 'app/website/**'
+      - '.github/workflows/deploy-website.yml'
 
 permissions:
   contents: write

@@ -62,5 +62,5 @@ packages/
 ```yaml
 run: jq -r '.build.PROFILE.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> $GITHUB_ENV
 ```
-- Preview APK: `.github/workflows/preview-apk.yml` (canary branch → prerelease)
-- Release APK: `.github/workflows/release.yml` (main push → 正式リリース)
+- Preview APK: `.github/workflows/preview-apk.yml` (main push → prerelease)
+- Release APK: `.github/workflows/release.yml` (version tag `v*` push → 正式リリース)
