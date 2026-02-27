@@ -13,7 +13,7 @@ provider "aws" {
 }
 
 variable "project_name" {
-  default = "pleno-audit-api"
+  default = "pleno-live-api"
 }
 
 locals {

@@ -8,10 +8,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "pleno-audit-api-terraform-state"
+    bucket         = "pleno-live-api-terraform-state"
     key            = "prod/terraform.tfstate"
     region         = "ap-northeast-1"
-    dynamodb_table = "pleno-audit-api-terraform-lock"
+    dynamodb_table = "pleno-live-api-terraform-lock"
     encrypt        = true
   }
 }
