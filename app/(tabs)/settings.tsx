@@ -43,7 +43,7 @@ const TRANSCRIPTION_PROVIDERS: { value: TranscriptionProvider; label: string; de
   { value: "elevenlabs", label: "ElevenLabs", description: "高精度・話者分離対応" },
   { value: "gemini", label: "Gemini", description: "Googleマルチモーダル" },
   { value: "whisper-local", label: "Whisper", description: "オフライン・プライバシー重視" },
-  { value: "moonshine-local", label: "Moonshine", description: "オフライン・英語特化・高速 (iOS/Android)" },
+  { value: "moonshine-local", label: "Moonshine", description: "オフライン・高速 (Web/iOS/Android)" },
 ];
 
 const TEMPLATES: { value: SummaryTemplate; label: string; description: string }[] = [
@@ -237,6 +237,7 @@ export default function SettingsScreen() {
           <RowLabel label="文字起こしプロバイダ" colors={colors} />
           {TRANSCRIPTION_PROVIDERS.filter((p) => {
             if (p.value === "whisper-local") return Platform.OS === "web" && isWhisperSupported;
+            // moonshine-local: Web は moonshine-js で対応, Native は executorch で対応
             if (p.value === "moonshine-local") return isMoonshineSupported;
             return true;
           }).map((provider) => (
