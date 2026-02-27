@@ -1,6 +1,6 @@
-import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
+import { Storage } from "@/packages/platform/storage";
 
 const STORE_KEY_SESSION_TOKEN = "auth.sessionToken";
 const STORE_KEY_EXPIRES_AT = "auth.expiresAt";
@@ -56,11 +56,11 @@ function generateUUID(): string {
 }
 
 async function getOrCreateDeviceId(): Promise<string> {
-  const existing = await SecureStore.getItemAsync(STORE_KEY_DEVICE_ID);
+  const existing = await Storage.getItem(STORE_KEY_DEVICE_ID);
   if (existing) return existing;
 
   const id = generateUUID();
-  await SecureStore.setItemAsync(STORE_KEY_DEVICE_ID, id);
+  await Storage.setItem(STORE_KEY_DEVICE_ID, id);
   return id;
 }
 
@@ -91,8 +91,8 @@ function scheduleRefresh() {
 }
 
 async function loadStoredSession(): Promise<boolean> {
-  const storedToken = await SecureStore.getItemAsync(STORE_KEY_SESSION_TOKEN);
-  const storedExpiry = await SecureStore.getItemAsync(STORE_KEY_EXPIRES_AT);
+  const storedToken = await Storage.getItem(STORE_KEY_SESSION_TOKEN);
+  const storedExpiry = await Storage.getItem(STORE_KEY_EXPIRES_AT);
 
   if (!storedToken || !storedExpiry) return false;
 
@@ -106,17 +106,25 @@ async function loadStoredSession(): Promise<boolean> {
 }
 
 async function storeSession(token: string, expiry: number): Promise<void> {
-  await SecureStore.setItemAsync(STORE_KEY_SESSION_TOKEN, token);
-  await SecureStore.setItemAsync(STORE_KEY_EXPIRES_AT, String(expiry));
+  await Storage.setItem(STORE_KEY_SESSION_TOKEN, token);
+  await Storage.setItem(STORE_KEY_EXPIRES_AT, String(expiry));
   sessionToken = token;
   expiresAt = expiry;
 }
 
 async function computeResponseHash(nonce: string): Promise<string> {
-  return Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    APP_HMAC_SECRET + ":" + nonce,
-  );
+  const input = APP_HMAC_SECRET + ":" + nonce;
+
+  if (Platform.OS === "web") {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, input);
 }
 
 async function performAuthFlow(): Promise<void> {
