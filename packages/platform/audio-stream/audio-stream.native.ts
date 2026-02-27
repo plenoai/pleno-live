@@ -4,7 +4,7 @@
  */
 
 import { ExpoPlayAudioStream } from '@mykin-ai/expo-audio-stream';
-import type { AudioStreamConfig, AudioStreamController } from './index';
+import type { AudioStreamConfig, AudioStreamController, AudioStreamResult } from './index';
 
 export function createAudioStream(config: AudioStreamConfig): AudioStreamController {
   let isActive = false;
@@ -49,8 +49,8 @@ export function createAudioStream(config: AudioStreamConfig): AudioStreamControl
       }
     },
 
-    async stop(): Promise<void> {
-      if (!isActive) return;
+    async stop(): Promise<AudioStreamResult | null> {
+      if (!isActive) return null;
 
       try {
         console.log('[AudioStream.native] Stopping audio stream...');
@@ -60,13 +60,15 @@ export function createAudioStream(config: AudioStreamConfig): AudioStreamControl
           subscription = null;
         }
 
-        await ExpoPlayAudioStream.stopRecording();
+        const result = await ExpoPlayAudioStream.stopRecording();
         isActive = false;
 
         console.log('[AudioStream.native] Audio stream stopped');
+        return { fileUri: result.fileUri, mimeType: result.mimeType };
       } catch (error) {
         console.error('[AudioStream.native] Failed to stop:', error);
         isActive = false;
+        return null;
       }
     },
 

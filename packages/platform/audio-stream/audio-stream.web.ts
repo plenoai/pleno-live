@@ -89,8 +89,8 @@ export function createAudioStream(config: AudioStreamConfig): AudioStreamControl
       }
     },
 
-    async stop(): Promise<void> {
-      if (!isActive) return;
+    async stop(): Promise<null> {
+      if (!isActive) return null;
 
       console.log('[AudioStream.web] Stopping audio stream...');
 
@@ -111,6 +111,7 @@ export function createAudioStream(config: AudioStreamConfig): AudioStreamControl
 
       isActive = false;
       console.log('[AudioStream.web] Audio stream stopped');
+      return null;
     },
 
     isStreaming(): boolean {

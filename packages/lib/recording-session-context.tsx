@@ -11,7 +11,7 @@ import { useBackgroundRecording } from '@/packages/hooks/use-background-recordin
 import { useRecordingDraft } from '@/packages/hooks/use-recording-draft';
 import { Recording, Highlight, RecordingDraft } from '@/packages/types/recording';
 import type { TranslationStatus, TranscriptSegment } from '@/packages/types/realtime-transcription';
-import { Haptics, FileSystem, Permissions, createAudioMetering, type AudioMeteringController } from '@/packages/platform';
+import { Haptics, FileSystem, Permissions } from '@/packages/platform';
 import { SystemAudioStream, type AudioSource } from './system-audio-stream';
 
 const RECORDING_OPTIONS = {
@@ -74,7 +74,6 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
   const isStartingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const audioMeteringRef = useRef<AudioMeteringController | null>(null);
   const systemAudioStreamRef = useRef<SystemAudioStream | null>(null);
   // auto-saveのステールクロージャを防ぐためのref
   const durationRef = useRef(0);
@@ -109,7 +108,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
     targetLanguage: translationTargetLanguage,
   });
 
-  useAudioRecorderState(audioRecorder, 100);
+  const recorderState = useAudioRecorderState(audioRecorder, 100);
 
   // Enable background recording for iOS/Android
   useBackgroundRecording(isRecording);
@@ -124,46 +123,25 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
   useEffect(() => { fullMeteringHistoryRef.current = fullMeteringHistory; }, [fullMeteringHistory]);
 
   // Audio metering effect
+  // expo-audioの組み込みメータリング (recorderState.metering) を使用。
+  // 以前は別ライブラリ (ExpoPlayAudioStream) で2つ目の録音ストリームを開いていたが、
+  // Androidではマイクが排他リソースのため競合して値が取れなかった。
   useEffect(() => {
-    // リアルタイムが有効な場合はsoundLevelを使用
-    if (realtimeEnabled && isRecording) {
-      const db = realtimeSoundLevel > 0 ? 20 * Math.log10(realtimeSoundLevel) : -60;
-      setMetering(Math.max(-60, Math.min(0, db)));
+    if (!isRecording) {
+      setMetering(-160);
       return;
     }
 
-    // 通常のメータリング
-    if (isRecording && !isPaused && !realtimeEnabled) {
-      if (!audioMeteringRef.current) {
-        audioMeteringRef.current = createAudioMetering();
-        audioMeteringRef.current.onMeteringUpdate((db) => {
-          setMetering(db);
-        });
-      }
-      audioMeteringRef.current.start().catch(console.error);
-    } else {
-      if (audioMeteringRef.current) {
-        audioMeteringRef.current.stop();
-        audioMeteringRef.current = null;
-      }
-      if (!isRecording) {
-        setMetering(-160);
-      }
+    if (realtimeEnabled) {
+      // リアルタイム文字起こし有効時: ExpoPlayAudioStreamのsoundLevelを使用
+      const db = realtimeSoundLevel > 0 ? 20 * Math.log10(realtimeSoundLevel) : -60;
+      setMetering(Math.max(-60, Math.min(0, db)));
+    } else if (!isPaused && recorderState.metering != null) {
+      // 通常録音: expo-audioの組み込みメータリング (同一録音セッションから取得)
+      setMetering(recorderState.metering);
     }
+  }, [isRecording, isPaused, realtimeEnabled, realtimeSoundLevel, recorderState.metering]);
 
-    return () => {
-      if (audioMeteringRef.current) {
-        audioMeteringRef.current.stop();
-        audioMeteringRef.current = null;
-      }
-    };
-  }, [isRecording, isPaused, realtimeEnabled, realtimeSoundLevel]);
-
-  // auto-save用refを最新ステートと同期
-  useEffect(() => { durationRef.current = duration; }, [duration]);
-  useEffect(() => { highlightsRef.current = highlights; }, [highlights]);
-  useEffect(() => { fullMeteringHistoryRef.current = fullMeteringHistory; }, [fullMeteringHistory]);
-  useEffect(() => { realtimeSegmentsRef.current = realtimeState.segments; }, [realtimeState.segments]);
 
   // 翻訳先言語が変わったらキャッシュをクリア
   useEffect(() => {
@@ -266,9 +244,14 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
     await Haptics.impact('medium');
 
     try {
-      // マイク録音を開始（音声ファイル保存用）
-      await audioRecorder.prepareToRecordAsync();
-      audioRecorder.record();
+      // Native + realtime: ExpoPlayAudioStreamが録音・ストリーミング・メータリングを一括担当
+      // それ以外: expo-audioで録音ファイルを保存（マイク排他アクセス競合を回避）
+      const useStreamRecording = realtimeEnabled && Platform.OS !== 'web';
+
+      if (!useStreamRecording) {
+        await audioRecorder.prepareToRecordAsync();
+        audioRecorder.record();
+      }
       setIsRecording(true);
       setIsPaused(false);
       setDuration(0);
@@ -331,6 +314,9 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
   }, [audioRecorder, realtimeEnabled, translationEnabled, startRealtimeSession, translatePartial, translateCommitted, clearTranslationCache, isRecording, sendAudioChunk]);
 
   const pauseResume = useCallback(async () => {
+    // ExpoPlayAudioStreamはpause/resumeをサポートしない
+    if (realtimeEnabled && Platform.OS !== 'web') return;
+
     await Haptics.impact('light');
 
     try {
@@ -344,7 +330,7 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
     } catch {
       // audioRecorder APIの失敗は無視（状態は変更しない）
     }
-  }, [audioRecorder, isPaused]);
+  }, [audioRecorder, isPaused, realtimeEnabled]);
 
   const stopRecording = useCallback(async () => {
     await Haptics.notification('success');
@@ -358,42 +344,52 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
     }
 
     try {
+      const useStreamRecording = realtimeEnabled && Platform.OS !== 'web';
+      let audioFileUri: string | null | undefined;
+
       if (realtimeEnabled && currentRecordingId) {
         try {
-          await stopRealtimeSession();
+          const streamResult = await stopRealtimeSession();
+          if (useStreamRecording && streamResult) {
+            audioFileUri = streamResult.fileUri;
+          }
         } catch {
           // リアルタイムセッション停止の失敗は録音保存を妨げない
         }
       }
 
-      await audioRecorder.stop();
+      if (!useStreamRecording) {
+        await audioRecorder.stop();
+        audioFileUri = audioRecorder.uri;
+      }
+
       setIsRecording(false);
       setIsPaused(false);
 
-      const uri = audioRecorder.uri;
-      if (!uri) {
+      if (!audioFileUri) {
         Alert.alert('エラー', '録音ファイルが見つかりません');
         return;
       }
 
-      let finalUri = uri;
+      let finalUri = audioFileUri;
 
-      if (uri.startsWith('blob:')) {
-        const response = await fetch(uri);
+      if (audioFileUri.startsWith('blob:')) {
+        const response = await fetch(audioFileUri);
         const blob = await response.blob();
         const base64Data = await FileSystem.blobToBase64(blob);
         finalUri = `data:audio/webm;base64,${base64Data}`;
       } else if (FileSystem.documentDirectory) {
         // Native: ファイルを移動
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `recording_${timestamp}.m4a`;
+        const ext = audioFileUri.split('.').pop() || 'm4a';
+        const filename = `recording_${timestamp}.${ext}`;
         const newUri = `${FileSystem.documentDirectory}recordings/${filename}`;
 
         await FileSystem.makeDirectoryAsync(`${FileSystem.documentDirectory}recordings/`, {
           intermediates: true,
         });
 
-        await FileSystem.moveAsync(uri, newUri);
+        await FileSystem.moveAsync(audioFileUri, newUri);
         finalUri = newUri;
       }
 
@@ -507,7 +503,10 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
         }
       }
 
-      await audioRecorder.stop();
+      // ExpoPlayAudioStreamのみ使用時はaudioRecorderは起動していない
+      if (!realtimeEnabled || Platform.OS === 'web') {
+        await audioRecorder.stop();
+      }
     } finally {
       setIsRecording(false);
       setIsPaused(false);

@@ -17,11 +17,8 @@ export type { PlatformFileSystem } from './filesystem';
 export { Permissions } from './permissions';
 export type { PermissionStatus, PlatformPermissions } from './permissions';
 
-export { createAudioMetering } from './audio-metering';
-export type { AudioMeteringConfig, AudioMeteringController } from './audio-metering';
-
 export { createAudioStream } from './audio-stream';
-export type { AudioStreamConfig, AudioStreamController } from './audio-stream';
+export type { AudioStreamConfig, AudioStreamController, AudioStreamResult } from './audio-stream';
 
 export { BackgroundTask } from './background-task';
 export type { PlatformBackgroundTask } from './background-task';

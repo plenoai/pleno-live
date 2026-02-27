@@ -12,9 +12,14 @@ export interface AudioStreamConfig {
   interval: number;
 }
 
+export interface AudioStreamResult {
+  fileUri: string;
+  mimeType: string;
+}
+
 export interface AudioStreamController {
   start(onChunk: (base64Audio: string) => void, onSoundLevel?: (level: number) => void): Promise<void>;
-  stop(): Promise<void>;
+  stop(): Promise<AudioStreamResult | null>;
   isStreaming(): boolean;
 }
 

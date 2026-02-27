@@ -9,7 +9,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Alert } from "react-native";
 import { trpc } from "@/packages/lib/trpc";
 import { RealtimeTranscriptionClient } from "@/packages/lib/realtime-transcription";
-import { createAudioStream, type AudioStreamController } from "@/packages/platform";
+import { createAudioStream, type AudioStreamController, type AudioStreamResult } from "@/packages/platform";
 import type {
   TranscriptSegment,
   RealtimeTranscriptionState,
@@ -101,16 +101,19 @@ export function useRealtimeTranscription() {
 
   /**
    * 音声ストリーミングを停止
+   * @returns Native: ExpoPlayAudioStreamが保存した音声ファイル情報, Web: null
    */
-  const stopAudioStreaming = useCallback(async () => {
+  const stopAudioStreaming = useCallback(async (): Promise<AudioStreamResult | null> => {
     try {
       if (audioStreamRef.current) {
-        await audioStreamRef.current.stop();
+        const result = await audioStreamRef.current.stop();
         audioStreamRef.current = null;
+        return result;
       }
     } catch (error) {
       console.error("[useRealtimeTranscription] Failed to stop audio streaming:", error);
     }
+    return null;
   }, []);
 
   // コールバック参照
@@ -353,9 +356,10 @@ export function useRealtimeTranscription() {
 
   /**
    * セッションを停止
+   * @returns Native: ExpoPlayAudioStreamが保存した音声ファイル情報, Web: null
    */
-  const stopSession = useCallback(async (): Promise<void> => {
-    await stopAudioStreaming();
+  const stopSession = useCallback(async (): Promise<AudioStreamResult | null> => {
+    const streamResult = await stopAudioStreaming();
 
     if (clientRef.current) {
       clientRef.current.disconnect();
@@ -369,6 +373,7 @@ export function useRealtimeTranscription() {
     }));
 
     currentRecordingIdRef.current = null;
+    return streamResult;
   }, [stopAudioStreaming]);
 
   /**
