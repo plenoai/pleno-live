@@ -51,10 +51,10 @@ function getStatusInfo(status: Recording["status"]): { text: string; variant: St
       return { text: "文字起こし中", variant: "warning" };
     case "transcribed":
       return { text: "文字起こし完了", variant: "success" };
-    case "summarizing":
-      return { text: "要約中", variant: "warning" };
-    case "summarized":
-      return { text: "要約完了", variant: "primary" };
+    case "analyzing":
+      return { text: "分析中", variant: "warning" };
+    case "analyzed":
+      return { text: "分析済", variant: "primary" };
     default:
       return { text: "", variant: "muted" };
   }

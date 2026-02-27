@@ -40,7 +40,7 @@
     "searchPlaceholder": "録音を検索...",
     "allNotes": "すべて",
     "transcribed": "文字起こし済",
-    "summarized": "要約済",
+    "summarized": "分析済",
     "emptyState": "まだ録音がありません",
     "duration": "継続時間",
     "createdAt": "作成日時",
@@ -51,8 +51,8 @@
     "statusSaved": "保存済み",
     "statusTranscribing": "文字起こし中",
     "statusTranscribed": "文字起こし完了",
-    "statusSummarizing": "要約中",
-    "statusSummarized": "要約完了"
+    "statusAnalyzing": "分析中",
+    "statusAnalyzed": "分析済"
   },
   "settings": {
     "title": "設定",
@@ -64,8 +64,8 @@
     "languageEnglish": "English",
     "autoTranscribe": "自動文字起こし",
     "autoTranscribeDescription": "録音完了時に自動的に文字起こしを開始",
-    "autoSummarize": "自動要約",
-    "autoSummarizeDescription": "文字起こし完了時に自動的に要約を生成",
+    "autoAnalyze": "自動分析",
+    "autoAnalyzeDescription": "文字起こし完了時に自動的に全分析を実行",
     "transcription": "文字起こし設定",
     "transcriptionProvider": "プロバイダ",
     "realtimeTranscription": "リアルタイム文字起こし",

@@ -13,9 +13,7 @@ export interface SettingsState {
   colorScheme: 'light' | 'dark';
   summaryTemplate: string;
   autoTranscribe: boolean;
-  autoSummarize: boolean;
-  autoSentiment: boolean;
-  autoKeywords: boolean;
+  autoAnalyze: boolean;
   transcriptionProvider: TranscriptionProvider;
   realtimeTranscription: {
     enabled: boolean;
@@ -38,9 +36,7 @@ const defaultSettings: SettingsState = {
   colorScheme: 'light',
   summaryTemplate: '',
   autoTranscribe: false,
-  autoSummarize: false,
-  autoSentiment: false,
-  autoKeywords: false,
+  autoAnalyze: false,
   transcriptionProvider: 'gemini',
   realtimeTranscription: {
     enabled: false,
@@ -81,6 +77,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         const saved = await Storage.getItem(SETTINGS_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
+          // Migrate legacy auto settings: autoSummarize/autoSentiment/autoKeywords → autoAnalyze
+          if (parsed.autoAnalyze === undefined && (parsed.autoSummarize || parsed.autoSentiment || parsed.autoKeywords)) {
+            parsed.autoAnalyze = true;
+          }
+          delete parsed.autoSummarize;
+          delete parsed.autoSentiment;
+          delete parsed.autoKeywords;
+
           setSettings(prev => ({
             ...prev,
             ...parsed,

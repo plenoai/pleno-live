@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { Storage } from '@/packages/platform';
-import { Recording, Highlight, Transcript, Summary, QAMessage } from '@/packages/types/recording';
+import { Recording, Highlight, Transcript, Summary, Analysis, QAMessage } from '@/packages/types/recording';
 import type { TranscriptSegment as RealtimeTranscriptSegment } from '@/packages/types/realtime-transcription';
 
 const STORAGE_KEY = 'pleno_live_recordings';
@@ -18,6 +18,7 @@ type RecordingsAction =
   | { type: 'ADD_HIGHLIGHT'; payload: { recordingId: string; highlight: Highlight } }
   | { type: 'SET_TRANSCRIPT'; payload: { recordingId: string; transcript: Transcript } }
   | { type: 'SET_SUMMARY'; payload: { recordingId: string; summary: Summary } }
+  | { type: 'SET_ANALYSIS'; payload: { recordingId: string; analysis: Analysis } }
   | { type: 'ADD_QA_MESSAGE'; payload: { recordingId: string; message: QAMessage } }
   | { type: 'UPDATE_REALTIME_TRANSCRIPT'; payload: { recordingId: string; segments: RealtimeTranscriptSegment[] } }
   | { type: 'CLEAR_REALTIME_TRANSCRIPT'; payload: string }
@@ -64,7 +65,29 @@ function recordingsReducer(state: RecordingsState, action: RecordingsAction): Re
         ...state,
         recordings: state.recordings.map((r) =>
           r.id === action.payload.recordingId
-            ? { ...r, summary: action.payload.summary, status: 'summarized', updatedAt: new Date() }
+            ? { ...r, summary: action.payload.summary, status: 'analyzed' as const, updatedAt: new Date() }
+            : r
+        ),
+      };
+    case 'SET_ANALYSIS':
+      return {
+        ...state,
+        recordings: state.recordings.map((r) =>
+          r.id === action.payload.recordingId
+            ? {
+                ...r,
+                analysis: action.payload.analysis,
+                tags: action.payload.analysis.tags,
+                actionItems: action.payload.analysis.actionItems.map(newItem => {
+                  // Preserve completed state of existing action items
+                  const existing = r.actionItems.find(a => a.text === newItem.text);
+                  return existing ? { ...newItem, completed: existing.completed } : newItem;
+                }),
+                keywords: action.payload.analysis.keywords,
+                sentiment: action.payload.analysis.sentiment,
+                status: 'analyzed' as const,
+                updatedAt: new Date(),
+              }
             : r
         ),
       };
@@ -117,6 +140,7 @@ interface RecordingsContextValue {
   addHighlight: (recordingId: string, highlight: Highlight) => Promise<void>;
   setTranscript: (recordingId: string, transcript: Transcript) => Promise<void>;
   setSummary: (recordingId: string, summary: Summary) => Promise<void>;
+  setAnalysis: (recordingId: string, analysis: Analysis) => Promise<void>;
   addQAMessage: (recordingId: string, message: QAMessage) => Promise<void>;
   updateRealtimeTranscript: (recordingId: string, segments: RealtimeTranscriptSegment[]) => void;
   clearRealtimeTranscript: (recordingId: string) => void;
@@ -155,15 +179,45 @@ export function RecordingsProvider({ children }: { children: React.ReactNode }) 
 
       const parsed = JSON.parse(stored);
 
-      const recordings = parsed.map((r: Recording) => {
+      const recordings = parsed.map((r: any) => {
         // 日付文字列をそのまま保持し、必要時に変換
         const createdAtStr = r.createdAt;
         const updatedAtStr = r.updatedAt;
         const transcriptProcessedAtStr = r.transcript?.processedAt;
         const summaryProcessedAtStr = r.summary?.processedAt;
+        const analysisProcessedAtStr = r.analysis?.processedAt;
+
+        // Status migration: summarizing → analyzing, summarized → analyzed
+        let status = r.status;
+        if (status === 'summarizing') status = 'analyzing';
+        if (status === 'summarized') status = 'analyzed';
+
+        // Migrate legacy data: build analysis from summary + individual fields
+        let analysis = r.analysis;
+        if (!analysis && r.summary) {
+          analysis = {
+            overview: r.summary.overview || '',
+            keyPoints: r.summary.keyPoints || [],
+            tags: r.tags || [],
+            actionItems: r.actionItems || [],
+            keywords: r.keywords || [],
+            sentiment: r.sentiment || {
+              overallSentiment: 'neutral' as const,
+              score: 0,
+              confidence: 0,
+              emotions: { joy: 0, sadness: 0, anger: 0, fear: 0, surprise: 0, disgust: 0 },
+              summary: '',
+              processedAt: new Date(),
+            },
+            processedAt: typeof summaryProcessedAtStr === 'string'
+              ? new Date(summaryProcessedAtStr)
+              : summaryProcessedAtStr || new Date(),
+          };
+        }
 
         return {
           ...r,
+          status,
           // 日付変換は必要に応じて実行（アクセス時に変換）
           createdAt: typeof createdAtStr === 'string' ? new Date(createdAtStr) : createdAtStr,
           updatedAt: typeof updatedAtStr === 'string' ? new Date(updatedAtStr) : updatedAtStr,
@@ -183,7 +237,15 @@ export function RecordingsProvider({ children }: { children: React.ReactNode }) 
                   : summaryProcessedAtStr,
               }
             : undefined,
-          qaHistory: r.qaHistory.map((m: QAMessage) => ({
+          analysis: analysis
+            ? {
+                ...analysis,
+                processedAt: typeof analysisProcessedAtStr === 'string'
+                  ? new Date(analysisProcessedAtStr)
+                  : analysis.processedAt,
+              }
+            : undefined,
+          qaHistory: (r.qaHistory || []).map((m: QAMessage) => ({
             ...m,
             timestamp: typeof m.timestamp === 'string' ? new Date(m.timestamp) : m.timestamp,
           })),
@@ -234,6 +296,10 @@ export function RecordingsProvider({ children }: { children: React.ReactNode }) 
     dispatch({ type: 'SET_SUMMARY', payload: { recordingId, summary } });
   }, []);
 
+  const setAnalysis = useCallback(async (recordingId: string, analysis: Analysis) => {
+    dispatch({ type: 'SET_ANALYSIS', payload: { recordingId, analysis } });
+  }, []);
+
   const addQAMessage = useCallback(async (recordingId: string, message: QAMessage) => {
     dispatch({ type: 'ADD_QA_MESSAGE', payload: { recordingId, message } });
   }, []);
@@ -261,6 +327,7 @@ export function RecordingsProvider({ children }: { children: React.ReactNode }) 
         addHighlight,
         setTranscript,
         setSummary,
+        setAnalysis,
         addQAMessage,
         updateRealtimeTranscript,
         clearRealtimeTranscript,
@@ -281,6 +348,7 @@ const defaultValue: RecordingsContextValue = {
   addHighlight: async () => {},
   setTranscript: async () => {},
   setSummary: async () => {},
+  setAnalysis: async () => {},
   addQAMessage: async () => {},
   updateRealtimeTranscript: () => {},
   clearRealtimeTranscript: () => {},
