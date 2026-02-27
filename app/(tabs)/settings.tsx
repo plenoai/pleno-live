@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   Text,
   View,
@@ -32,27 +32,27 @@ interface CustomTemplate {
 }
 
 const LANGUAGES: { value: Language; label: string }[] = [
-  { value: "auto", label: "自動検出" },
+  { value: "auto", label: "自動" },
   { value: "ja", label: "日本語" },
   { value: "en", label: "English" },
 ];
 
 const TRANSCRIPTION_PROVIDERS: { value: TranscriptionProvider; label: string; description: string }[] = [
-  { value: "elevenlabs", label: "ElevenLabs", description: "高精度な話者分離機能（クラウド）" },
-  { value: "whisper-local", label: "Whisper (ローカル)", description: "オフライン対応・プライバシー重視" },
-  { value: "gemini", label: "Gemini", description: "Googleのマルチモーダルモデル" },
+  { value: "elevenlabs", label: "ElevenLabs", description: "高精度・話者分離対応" },
+  { value: "gemini", label: "Gemini", description: "Googleマルチモーダル" },
+  { value: "whisper-local", label: "Whisper", description: "オフライン・プライバシー重視" },
 ];
 
 const TEMPLATES: { value: SummaryTemplate; label: string; description: string }[] = [
-  { value: "general", label: "一般", description: "汎用的な要約形式" },
-  { value: "meeting", label: "会議", description: "議題・決定事項・アクションアイテム" },
-  { value: "interview", label: "インタビュー", description: "主要トピック・重要発言・結論" },
-  { value: "lecture", label: "講義", description: "主要概念・学習ポイント" },
+  { value: "general", label: "一般", description: "汎用" },
+  { value: "meeting", label: "会議", description: "議題・決定・アクション" },
+  { value: "interview", label: "インタビュー", description: "発言・結論" },
+  { value: "lecture", label: "講義", description: "概念・学習ポイント" },
 ];
 
 const TRANSLATION_LANGUAGES: { value: string; label: string }[] = [
   { value: "ja", label: "日本語" },
-  { value: "en", label: "English (英語)" },
+  { value: "en", label: "English" },
 ];
 
 const CUSTOM_TEMPLATES_KEY = "custom-templates";
@@ -68,7 +68,6 @@ export default function SettingsScreen() {
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplatePrompt, setNewTemplatePrompt] = useState("");
 
-  // Whisperモデル管理
   const {
     state: whisperState,
     loadModel: loadWhisperModel,
@@ -77,46 +76,20 @@ export default function SettingsScreen() {
     isSupported: isWhisperSupported,
   } = useWhisperModel();
 
-  // Load custom templates on mount
   useEffect(() => {
-    const loadCustomTemplates = async () => {
-      const savedTemplates = await Storage.getItem(CUSTOM_TEMPLATES_KEY);
-      if (!savedTemplates) return;
-
-      let templates: CustomTemplate[];
+    const load = async () => {
+      const saved = await Storage.getItem(CUSTOM_TEMPLATES_KEY);
+      if (!saved) return;
       try {
-        templates = JSON.parse(savedTemplates);
-      } catch {
-        return; // 壊れたJSONは無視して初期状態を維持
-      }
-
-      setCustomTemplates(templates.map(t => ({
-        ...t,
-        createdAt: new Date(t.createdAt),
-      })));
+        const parsed: CustomTemplate[] = JSON.parse(saved);
+        setCustomTemplates(parsed.map(t => ({ ...t, createdAt: new Date(t.createdAt) })));
+      } catch { /* 壊れたデータは無視 */ }
     };
-    loadCustomTemplates();
+    load();
   }, []);
 
-  const handleLanguageChange = (language: Language) => {
-    Haptics.impact('light');
-    updateSettings({ language });
-  };
-
-  const handleTemplateChange = (template: SummaryTemplate) => {
-    Haptics.impact('light');
-    updateSettings({ summaryTemplate: template });
-  };
-
-  const handleProviderChange = (provider: TranscriptionProvider) => {
-    Haptics.impact('light');
-    updateSettings({ transcriptionProvider: provider });
-  };
-
-  const handleToggle = (key: "autoTranscribe" | "autoAnalyze") => {
-    Haptics.impact('light');
-    updateSettings({ [key]: !settings[key] });
-  };
+  const realtimeEnabled = settings.realtimeTranscription.enabled;
+  const isElevenLabs = settings.transcriptionProvider === "elevenlabs";
 
   const handleClearData = async () => {
     if (Platform.OS === "web") {
@@ -124,10 +97,10 @@ export default function SettingsScreen() {
       if (confirmed) {
         try {
           await Storage.clear();
-          window.alert("すべてのデータが削除されました。ページを再読み込みしてください。");
+          window.alert("削除しました。ページを再読み込みしてください。");
           window.location.reload();
         } catch {
-          window.alert("データの削除に失敗しました");
+          window.alert("削除に失敗しました");
         }
       }
     } else {
@@ -142,9 +115,9 @@ export default function SettingsScreen() {
             onPress: async () => {
               try {
                 await Storage.clear();
-                Alert.alert("完了", "すべてのデータが削除されました。アプリを再起動してください。");
+                Alert.alert("完了", "削除しました。アプリを再起動してください。");
               } catch {
-                Alert.alert("エラー", "データの削除に失敗しました");
+                Alert.alert("エラー", "削除に失敗しました");
               }
             },
           },
@@ -156,45 +129,23 @@ export default function SettingsScreen() {
   const importMutation = trpc.ai.importRecording.useMutation();
 
   const handleImport = async () => {
-    Haptics.impact('light');
-
+    Haptics.impact("light");
     if (Platform.OS === "web") {
-      // Web: ファイル選択ダイアログを表示
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".json,.csv";
       input.onchange = async (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (!file) return;
-
         try {
           const content = await file.text();
           const format = file.name.endsWith(".csv") ? "csv" : "json";
-
-          const result = await importMutation.mutateAsync({
-            format: format as "csv" | "json",
-            data: content,
-          });
-
+          const result = await importMutation.mutateAsync({ format: format as "csv" | "json", data: content });
           if (result.success && result.recordings) {
-            // インポートした録音をストレージに追加
             for (const rec of result.recordings) {
-              await addRecording({
-                ...rec,
-                audioUri: "",
-                duration: 0,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                highlights: [],
-                notes: "",
-                tags: rec.tags || [],
-                actionItems: rec.actionItems || [],
-                keywords: rec.keywords || [],
-                qaHistory: [],
-                status: "saved",
-              });
+              await addRecording({ ...rec, audioUri: "", duration: 0, createdAt: new Date(), updatedAt: new Date(), highlights: [], notes: "", tags: rec.tags || [], actionItems: rec.actionItems || [], keywords: rec.keywords || [], qaHistory: [], status: "saved" });
             }
-            window.alert(`${result.count}件の録音メタデータをインポートしました。`);
+            window.alert(`${result.count}件をインポートしました。`);
           }
         } catch {
           window.alert("インポートに失敗しました");
@@ -202,43 +153,19 @@ export default function SettingsScreen() {
       };
       input.click();
     } else {
-      // Native: DocumentPickerを使用
       try {
         const { getDocumentAsync } = await import("expo-document-picker");
-        const result = await getDocumentAsync({
-          type: ["application/json", "text/csv"],
-        });
-
+        const result = await getDocumentAsync({ type: ["application/json", "text/csv"] });
         if (result.canceled || !result.assets?.[0]) return;
-
         const file = result.assets[0];
-        const response = await fetch(file.uri);
-        const content = await response.text();
+        const content = await (await fetch(file.uri)).text();
         const format = file.name?.endsWith(".csv") ? "csv" : "json";
-
-        const importResult = await importMutation.mutateAsync({
-          format: format as "csv" | "json",
-          data: content,
-        });
-
+        const importResult = await importMutation.mutateAsync({ format: format as "csv" | "json", data: content });
         if (importResult.success && importResult.recordings) {
           for (const rec of importResult.recordings) {
-            await addRecording({
-              ...rec,
-              audioUri: "",
-              duration: 0,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              highlights: [],
-              notes: "",
-              tags: rec.tags || [],
-              actionItems: rec.actionItems || [],
-              keywords: rec.keywords || [],
-              qaHistory: [],
-              status: "saved",
-            });
+            await addRecording({ ...rec, audioUri: "", duration: 0, createdAt: new Date(), updatedAt: new Date(), highlights: [], notes: "", tags: rec.tags || [], actionItems: rec.actionItems || [], keywords: rec.keywords || [], qaHistory: [], status: "saved" });
           }
-          Alert.alert("完了", `${importResult.count}件の録音メタデータをインポートしました。`);
+          Alert.alert("完了", `${importResult.count}件をインポートしました。`);
         }
       } catch {
         Alert.alert("エラー", "インポートに失敗しました");
@@ -251,88 +178,21 @@ export default function SettingsScreen() {
       Alert.alert("エラー", "テンプレート名とプロンプトを入力してください");
       return;
     }
-
-    const newTemplate: CustomTemplate = {
-      id: Date.now().toString(),
-      name: newTemplateName.trim(),
-      prompt: newTemplatePrompt.trim(),
-      createdAt: new Date(),
-    };
-
-    const updatedTemplates = [...customTemplates, newTemplate];
-    setCustomTemplates(updatedTemplates);
-    await Storage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(updatedTemplates));
-
-    // Reset form
+    const newTemplate: CustomTemplate = { id: Date.now().toString(), name: newTemplateName.trim(), prompt: newTemplatePrompt.trim(), createdAt: new Date() };
+    const updated = [...customTemplates, newTemplate];
+    setCustomTemplates(updated);
+    await Storage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(updated));
     setNewTemplateName("");
     setNewTemplatePrompt("");
     setShowTemplateForm(false);
-
     Alert.alert("完了", "カスタムテンプレートを作成しました");
   };
 
-  const handleDeleteTemplate = async (templateId: string) => {
-    const updated = customTemplates.filter(t => t.id !== templateId);
+  const handleDeleteTemplate = async (id: string) => {
+    const updated = customTemplates.filter(t => t.id !== id);
     setCustomTemplates(updated);
     await Storage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(updated));
   };
-
-  const totalDuration = recordingsState.recordings.reduce((sum, r) => sum + r.duration, 0);
-  const transcribedCount = recordingsState.recordings.filter((r) => r.transcript).length;
-  const summarizedCount = recordingsState.recordings.filter((r) => r.analysis || r.summary).length;
-
-  // 拡張統計
-  const stats = useMemo(() => {
-    const recordings = recordingsState.recordings;
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    // 今週の録音
-    const thisWeekRecordings = recordings.filter((r) => new Date(r.createdAt) >= weekAgo);
-
-    // 感情分析統計
-    const sentimentCounts = {
-      positive: recordings.filter((r) => r.sentiment?.overallSentiment === "positive").length,
-      neutral: recordings.filter((r) => r.sentiment?.overallSentiment === "neutral").length,
-      negative: recordings.filter((r) => r.sentiment?.overallSentiment === "negative").length,
-    };
-
-    // タグ統計
-    const tagCounts: Record<string, number> = {};
-    recordings.forEach((r) => {
-      r.tags.forEach((t) => {
-        tagCounts[t.name] = (tagCounts[t.name] || 0) + 1;
-      });
-    });
-    const topTags = Object.entries(tagCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([name, count]) => ({ name, count }));
-
-    // アクションアイテム統計
-    const allActionItems = recordings.flatMap((r) => r.actionItems);
-    const pendingActions = allActionItems.filter((a) => !a.completed).length;
-    const highPriorityActions = allActionItems.filter((a) => a.priority === "high" && !a.completed).length;
-
-    // 処理率
-    const transcriptionRate = recordings.length > 0
-      ? Math.round((transcribedCount / recordings.length) * 100)
-      : 0;
-    const summarizationRate = transcribedCount > 0
-      ? Math.round((summarizedCount / transcribedCount) * 100)
-      : 0;
-
-    return {
-      thisWeekCount: thisWeekRecordings.length,
-      thisWeekDuration: thisWeekRecordings.reduce((sum, r) => sum + r.duration, 0),
-      sentimentCounts,
-      topTags,
-      pendingActions,
-      highPriorityActions,
-      transcriptionRate,
-      summarizationRate,
-    };
-  }, [recordingsState.recordings, transcribedCount, summarizedCount]);
 
   return (
     <ScreenContainer>
@@ -341,507 +201,220 @@ export default function SettingsScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>設定</Text>
         </View>
 
-        {/* Statistics */}
+        {/* 録音 */}
+        <SectionHeader label="録音" />
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>統計</Text>
-
-          {/* Basic Stats */}
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>
-                {recordingsState.recordings.length}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>録音数</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>
-                {Math.floor(totalDuration / 60)}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>合計時間(分)</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.success }]}>{transcribedCount}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>文字起こし済</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.secondary }]}>{summarizedCount}</Text>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>分析済</Text>
-            </View>
-          </View>
-
-          {/* This Week */}
-          <View style={[styles.statsSubsection, { borderTopColor: colors.border }]}>
-            <Text style={[styles.statsSubsectionTitle, { color: colors.foreground }]}>今週</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statsRowItem}>
-                <Text style={[styles.statsRowValue, { color: colors.primary }]}>{stats.thisWeekCount}</Text>
-                <Text style={[styles.statsRowLabel, { color: colors.muted }]}>件</Text>
-              </View>
-              <View style={styles.statsRowItem}>
-                <Text style={[styles.statsRowValue, { color: colors.primary }]}>{Math.floor(stats.thisWeekDuration / 60)}</Text>
-                <Text style={[styles.statsRowLabel, { color: colors.muted }]}>分</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Processing Rate */}
-          <View style={[styles.statsSubsection, { borderTopColor: colors.border }]}>
-            <Text style={[styles.statsSubsectionTitle, { color: colors.foreground }]}>処理率</Text>
-            <View style={styles.progressBars}>
-              <View style={styles.progressBarRow}>
-                <Text style={[styles.progressBarLabel, { color: colors.muted }]}>文字起こし</Text>
-                <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { width: `${stats.transcriptionRate}%`, backgroundColor: colors.success },
-                    ]}
-                  />
-                </View>
-                <Text style={[styles.progressBarValue, { color: colors.foreground }]}>{stats.transcriptionRate}%</Text>
-              </View>
-              <View style={styles.progressBarRow}>
-                <Text style={[styles.progressBarLabel, { color: colors.muted }]}>分析</Text>
-                <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { width: `${stats.summarizationRate}%`, backgroundColor: colors.secondary },
-                    ]}
-                  />
-                </View>
-                <Text style={[styles.progressBarValue, { color: colors.foreground }]}>{stats.summarizationRate}%</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Sentiment Distribution */}
-          {(stats.sentimentCounts.positive + stats.sentimentCounts.neutral + stats.sentimentCounts.negative) > 0 && (
-            <View style={[styles.statsSubsection, { borderTopColor: colors.border }]}>
-              <Text style={[styles.statsSubsectionTitle, { color: colors.foreground }]}>感情分析</Text>
-              <View style={styles.sentimentRow}>
-                <View style={[styles.sentimentItem, { backgroundColor: colors.success + "20" }]}>
-                  <IconSymbol name="face.smiling" size={16} color={colors.success} />
-                  <Text style={[styles.sentimentCount, { color: colors.success }]}>{stats.sentimentCounts.positive}</Text>
-                </View>
-                <View style={[styles.sentimentItem, { backgroundColor: colors.muted + "20" }]}>
-                  <IconSymbol name="face.dashed" size={16} color={colors.muted} />
-                  <Text style={[styles.sentimentCount, { color: colors.muted }]}>{stats.sentimentCounts.neutral}</Text>
-                </View>
-                <View style={[styles.sentimentItem, { backgroundColor: colors.error + "20" }]}>
-                  <IconSymbol name="face.frowning" size={16} color={colors.error} />
-                  <Text style={[styles.sentimentCount, { color: colors.error }]}>{stats.sentimentCounts.negative}</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Action Items */}
-          {stats.pendingActions > 0 && (
-            <View style={[styles.statsSubsection, { borderTopColor: colors.border }]}>
-              <Text style={[styles.statsSubsectionTitle, { color: colors.foreground }]}>未完了タスク</Text>
-              <View style={styles.actionStatsRow}>
-                <View style={styles.actionStatItem}>
-                  <Text style={[styles.actionStatValue, { color: colors.warning }]}>{stats.pendingActions}</Text>
-                  <Text style={[styles.actionStatLabel, { color: colors.muted }]}>件</Text>
-                </View>
-                {stats.highPriorityActions > 0 && (
-                  <View style={[styles.actionStatBadge, { backgroundColor: colors.error + "20" }]}>
-                    <IconSymbol name="exclamationmark.triangle.fill" size={12} color={colors.error} />
-                    <Text style={[styles.actionStatBadgeText, { color: colors.error }]}>
-                      高優先度 {stats.highPriorityActions}件
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Top Tags */}
-          {stats.topTags.length > 0 && (
-            <View style={[styles.statsSubsection, { borderTopColor: colors.border }]}>
-              <Text style={[styles.statsSubsectionTitle, { color: colors.foreground }]}>よく使うタグ</Text>
-              <View style={styles.topTagsRow}>
-                {stats.topTags.map((tag) => (
-                  <View key={tag.name} style={[styles.topTagItem, { backgroundColor: colors.primary + "15" }]}>
-                    <Text style={[styles.topTagName, { color: colors.primary }]}>{tag.name}</Text>
-                    <Text style={[styles.topTagCount, { color: colors.primary }]}>{tag.count}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Language */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>言語設定</Text>
-          <View style={styles.optionGroup}>
+          {/* 文字起こし言語 */}
+          <RowLabel label="文字起こし言語" colors={colors} />
+          <View style={[styles.chipRow, { marginBottom: 16 }]}>
             {LANGUAGES.map((lang) => (
-              <TouchableOpacity
+              <Chip
                 key={lang.value}
-                onPress={() => handleLanguageChange(lang.value)}
-                style={[
-                  styles.optionButton,
-                  {
-                    backgroundColor:
-                      settings.language === lang.value ? colors.primary : colors.background,
-                    borderColor:
-                      settings.language === lang.value ? colors.primary : colors.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.optionText,
-                    {
-                      color:
-                        settings.language === lang.value ? "#FFFFFF" : colors.foreground,
-                    },
-                  ]}
-                >
-                  {lang.label}
-                </Text>
-              </TouchableOpacity>
+                label={lang.label}
+                selected={settings.language === lang.value}
+                onPress={() => { Haptics.impact("light"); updateSettings({ language: lang.value }); }}
+                colors={colors}
+              />
             ))}
           </View>
-        </View>
 
-        {/* Dark Mode */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleContent}>
-              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>ダークモード</Text>
-              <Text style={[styles.toggleDescription, { color: colors.muted }]}>
-                暗い環境での目の疲労を軽減
-              </Text>
-            </View>
-            <Switch
-              value={colorScheme === "dark"}
-              onValueChange={async (value) => {
-                await setColorScheme(value ? "dark" : "light");
-                await Storage.setItem("theme-preference", value ? "dark" : "light");
-                await Haptics.impact("light");
-              }}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-        </View>
-
-        {/* Transcription Provider */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>文字起こしプロバイダ</Text>
+          {/* 文字起こしプロバイダ */}
+          <RowLabel label="文字起こしプロバイダ" colors={colors} />
           {TRANSCRIPTION_PROVIDERS.filter(
             (p) => p.value !== "whisper-local" || (Platform.OS === "web" && isWhisperSupported)
           ).map((provider) => (
-            <TouchableOpacity
+            <SelectItem
               key={provider.value}
-              onPress={() => handleProviderChange(provider.value)}
-              style={[
-                styles.templateItem,
-                {
-                  backgroundColor:
-                    settings.transcriptionProvider === provider.value
-                      ? colors.primary + "15"
-                      : "transparent",
-                  borderColor:
-                    settings.transcriptionProvider === provider.value ? colors.primary : colors.border,
-                },
-              ]}
-            >
-              <View style={styles.templateContent}>
-                <Text
-                  style={[
-                    styles.templateLabel,
-                    {
-                      color:
-                        settings.transcriptionProvider === provider.value
-                          ? colors.primary
-                          : colors.foreground,
-                    },
-                  ]}
-                >
-                  {provider.label}
-                </Text>
-                <Text style={[styles.templateDescription, { color: colors.muted }]}>
-                  {provider.description}
+              label={provider.label}
+              description={provider.description}
+              selected={settings.transcriptionProvider === provider.value}
+              onPress={() => { Haptics.impact("light"); updateSettings({ transcriptionProvider: provider.value }); }}
+              colors={colors}
+            />
+          ))}
+
+          {/* Whisper詳細設定 - Web Only */}
+          {Platform.OS === "web" && settings.transcriptionProvider === "whisper-local" && (
+            <View style={[styles.subsection, { borderTopColor: colors.border }]}>
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: colors.muted }]}>WebGPU</Text>
+                <Text style={[styles.infoValue, { color: isWebGPUSupported ? colors.success : colors.warning }]}>
+                  {isWebGPUSupported ? "対応" : "非対応 (WASM)"}
                 </Text>
               </View>
-              {settings.transcriptionProvider === provider.value && (
-                <IconSymbol name="checkmark" size={20} color={colors.primary} />
+              <RowLabel label="モデルサイズ" colors={colors} />
+              {whisperModels.map((model) => (
+                <SelectItem
+                  key={model.id}
+                  label={`${model.label} (${model.size})${model.recommended ? " 推奨" : ""}`}
+                  description={model.description}
+                  selected={settings.whisperSettings.modelSize === model.id}
+                  onPress={() => { Haptics.impact("light"); updateNestedSettings("whisperSettings", { modelSize: model.id }); }}
+                  colors={colors}
+                />
+              ))}
+              {whisperState.isLoading && (
+                <NoteBox icon="arrow.down.circle.fill" text={`ダウンロード中... ${Math.round(whisperState.loadProgress)}%`} color={colors.primary} colors={colors} />
               )}
-            </TouchableOpacity>
-          ))}
+              {whisperState.isLoaded && (
+                <NoteBox icon="checkmark.circle.fill" text="モデル読み込み完了" color={colors.success} colors={colors} />
+              )}
+              {whisperState.error && (
+                <NoteBox icon="exclamationmark.circle.fill" text={whisperState.error} color={colors.error} colors={colors} />
+              )}
+              {!whisperState.isLoaded && !whisperState.isLoading && (
+                <TouchableOpacity
+                  onPress={() => loadWhisperModel(settings.whisperSettings.modelSize, settings.whisperSettings.useWebGPU && isWebGPUSupported)}
+                  style={[styles.actionButton, { borderColor: colors.primary, marginTop: 8 }]}
+                >
+                  <IconSymbol name="arrow.down.circle" size={18} color={colors.primary} />
+                  <Text style={[styles.actionButtonText, { color: colors.primary }]}>モデルをダウンロード</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          <View style={[styles.divider, { borderTopColor: colors.border }]} />
+
+          {/* 自動処理 */}
+          <ToggleRow
+            label="自動文字起こし"
+            description="録音完了後に自動で文字起こしを開始"
+            value={settings.autoTranscribe}
+            onValueChange={() => { Haptics.impact("light"); updateSettings({ autoTranscribe: !settings.autoTranscribe }); }}
+            colors={colors}
+          />
+          <ToggleRow
+            label="自動分析"
+            description="文字起こし後に要約・タグ・感情分析を自動実行（Gemini使用）"
+            value={settings.autoAnalyze}
+            onValueChange={() => { Haptics.impact("light"); updateSettings({ autoAnalyze: !settings.autoAnalyze }); }}
+            colors={colors}
+            noBorder
+          />
         </View>
 
-        {/* Whisper Settings - Web Only */}
-        {Platform.OS === "web" && settings.transcriptionProvider === "whisper-local" && (
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-              Whisper設定 (ローカル)
-            </Text>
-
-            {/* WebGPU Status */}
-            <View style={[styles.infoRow, { marginBottom: 12 }]}>
-              <Text style={[styles.infoLabel, { color: colors.muted }]}>WebGPU</Text>
-              <Text
-                style={[
-                  styles.infoValue,
-                  { color: isWebGPUSupported ? colors.success : colors.warning },
-                ]}
-              >
-                {isWebGPUSupported ? "対応" : "非対応 (WASM使用)"}
-              </Text>
-            </View>
-
-            {/* Model Selection */}
-            <Text style={[styles.optionLabel, { color: colors.muted, marginBottom: 8 }]}>
-              モデルサイズ
-            </Text>
-            {whisperModels.map((model) => (
-              <TouchableOpacity
-                key={model.id}
-                onPress={() => {
-                  Haptics.impact('light');
-                  updateNestedSettings('whisperSettings', { modelSize: model.id });
-                }}
-                style={[
-                  styles.templateItem,
-                  {
-                    backgroundColor:
-                      settings.whisperSettings.modelSize === model.id
-                        ? colors.primary + "15"
-                        : "transparent",
-                    borderColor:
-                      settings.whisperSettings.modelSize === model.id
-                        ? colors.primary
-                        : colors.border,
-                  },
-                ]}
-              >
-                <View style={styles.templateContent}>
-                  <Text
-                    style={[
-                      styles.templateLabel,
-                      {
-                        color:
-                          settings.whisperSettings.modelSize === model.id
-                            ? colors.primary
-                            : colors.foreground,
-                      },
-                    ]}
-                  >
-                    {model.label} ({model.size})
-                    {model.recommended && " 推奨"}
-                  </Text>
-                  <Text style={[styles.templateDescription, { color: colors.muted }]}>
-                    {model.description}
-                  </Text>
-                </View>
-                {settings.whisperSettings.modelSize === model.id && (
-                  <IconSymbol name="checkmark" size={20} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-
-            {/* Model Load Status */}
-            {whisperState.isLoading && (
-              <View style={[styles.noteBox, { backgroundColor: colors.primary + "15" }]}>
-                <IconSymbol name="arrow.down.circle.fill" size={16} color={colors.primary} />
-                <Text style={[styles.noteText, { color: colors.primary }]}>
-                  モデルをダウンロード中... {Math.round(whisperState.loadProgress)}%
-                </Text>
-              </View>
-            )}
-
-            {whisperState.isLoaded && (
-              <View style={[styles.noteBox, { backgroundColor: colors.success + "15" }]}>
-                <IconSymbol name="checkmark.circle.fill" size={16} color={colors.success} />
-                <Text style={[styles.noteText, { color: colors.success }]}>
-                  モデル読み込み完了
-                </Text>
-              </View>
-            )}
-
-            {whisperState.error && (
-              <View style={[styles.noteBox, { backgroundColor: colors.error + "15" }]}>
-                <IconSymbol name="exclamationmark.circle.fill" size={16} color={colors.error} />
-                <Text style={[styles.noteText, { color: colors.error }]}>
-                  {whisperState.error}
-                </Text>
-              </View>
-            )}
-
-            {/* Load Model Button */}
-            {!whisperState.isLoaded && !whisperState.isLoading && (
-              <TouchableOpacity
-                onPress={() =>
-                  loadWhisperModel(
-                    settings.whisperSettings.modelSize,
-                    settings.whisperSettings.useWebGPU && isWebGPUSupported
-                  )
-                }
-                style={[
-                  styles.dangerButton,
-                  { borderColor: colors.primary, marginTop: 12 },
-                ]}
-              >
-                <IconSymbol name="arrow.down.circle" size={20} color={colors.primary} />
-                <Text style={[styles.dangerButtonText, { color: colors.primary }]}>
-                  モデルをダウンロード
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <View style={[styles.noteBox, { backgroundColor: colors.warning + "15", marginTop: 12 }]}>
-              <IconSymbol name="exclamationmark.triangle.fill" size={16} color={colors.warning} />
-              <Text style={[styles.noteText, { color: colors.warning }]}>
-                ローカル処理のためリアルタイム性は3秒程度の遅延があります
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Summary Template */}
+        {/* リアルタイム（ElevenLabs限定） */}
+        <SectionHeader label="リアルタイム" badge="ElevenLabs 限定" colors={colors} />
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>要約テンプレート</Text>
-          {TEMPLATES.map((template) => (
-            <TouchableOpacity
-              key={template.value}
-              onPress={() => handleTemplateChange(template.value)}
-              style={[
-                styles.templateItem,
-                {
-                  backgroundColor:
-                    settings.summaryTemplate === template.value
-                      ? colors.primary + "15"
-                      : "transparent",
-                  borderColor:
-                    settings.summaryTemplate === template.value ? colors.primary : colors.border,
-                },
-              ]}
-            >
-              <View style={styles.templateContent}>
-                <Text
-                  style={[
-                    styles.templateLabel,
-                    {
-                      color:
-                        settings.summaryTemplate === template.value
-                          ? colors.primary
-                          : colors.foreground,
-                    },
-                  ]}
-                >
-                  {template.label}
-                </Text>
-                <Text style={[styles.templateDescription, { color: colors.muted }]}>
-                  {template.description}
-                </Text>
-              </View>
-              {settings.summaryTemplate === template.value && (
-                <IconSymbol name="checkmark" size={20} color={colors.primary} />
+          {!isElevenLabs && (
+            <NoteBox
+              icon="exclamationmark.triangle.fill"
+              text="リアルタイム機能は ElevenLabs プロバイダのみ利用できます"
+              color={colors.warning}
+              colors={colors}
+              style={{ marginBottom: 12 }}
+            />
+          )}
+          <ToggleRow
+            label="リアルタイム文字起こし"
+            description="録音中にリアルタイムで文字起こし結果を表示"
+            value={realtimeEnabled}
+            onValueChange={() => { Haptics.impact("light"); updateNestedSettings("realtimeTranscription", { enabled: !realtimeEnabled }); }}
+            colors={colors}
+            disabled={!isElevenLabs}
+          />
+          {realtimeEnabled && isElevenLabs && (
+            <>
+              <ToggleRow
+                label="話者分離"
+                description="複数話者を自動識別してラベル付け"
+                value={settings.realtimeTranscription.enableSpeakerDiarization}
+                onValueChange={() => { Haptics.impact("light"); updateNestedSettings("realtimeTranscription", { enableSpeakerDiarization: !settings.realtimeTranscription.enableSpeakerDiarization }); }}
+                colors={colors}
+              />
+              <ToggleRow
+                label="リアルタイム翻訳"
+                description="文字起こし結果をリアルタイムで翻訳（API使用量増加）"
+                value={settings.realtimeTranslation.enabled}
+                onValueChange={() => { Haptics.impact("light"); updateNestedSettings("realtimeTranslation", { enabled: !settings.realtimeTranslation.enabled }); }}
+                colors={colors}
+              />
+              {settings.realtimeTranslation.enabled && (
+                <View style={{ marginTop: 8 }}>
+                  <RowLabel label="翻訳先言語" colors={colors} />
+                  <View style={styles.chipRow}>
+                    {TRANSLATION_LANGUAGES.map((lang) => (
+                      <Chip
+                        key={lang.value}
+                        label={lang.label}
+                        selected={settings.realtimeTranslation.targetLanguage === lang.value}
+                        onPress={() => { Haptics.impact("light"); updateNestedSettings("realtimeTranslation", { targetLanguage: lang.value }); }}
+                        colors={colors}
+                      />
+                    ))}
+                  </View>
+                </View>
               )}
-            </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {/* 要約 */}
+        <SectionHeader label="要約" badge="Gemini 使用" colors={colors} />
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <RowLabel label="テンプレート" colors={colors} />
+          {TEMPLATES.map((template) => (
+            <SelectItem
+              key={template.value}
+              label={template.label}
+              description={template.description}
+              selected={settings.summaryTemplate === template.value}
+              onPress={() => { Haptics.impact("light"); updateSettings({ summaryTemplate: template.value }); }}
+              colors={colors}
+            />
           ))}
 
-          {/* Custom Templates */}
           {customTemplates.length > 0 && (
-            <View style={[styles.customTemplatesSection, { borderTopColor: colors.border }]}>
-              <Text style={[styles.subsectionTitle, { color: colors.foreground }]}>
-                カスタムテンプレート ({customTemplates.length})
-              </Text>
+            <View style={[styles.subsection, { borderTopColor: colors.border }]}>
+              <Text style={[styles.subsectionTitle, { color: colors.foreground }]}>カスタム ({customTemplates.length})</Text>
               {customTemplates.map((template) => (
-                <View
-                  key={template.id}
-                  style={[
-                    styles.customTemplateItem,
-                    { backgroundColor: colors.background, borderColor: colors.border }
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={{ flex: 1 }}
-                    onPress={() => handleTemplateChange(template.id)}
-                  >
-                    <Text style={[styles.customTemplateName, { color: colors.foreground }]}>
-                      {template.name}
-                    </Text>
-                    <Text
-                      style={[styles.customTemplatePrompt, { color: colors.muted }]}
-                      numberOfLines={2}
-                    >
-                      {template.prompt}
-                    </Text>
+                <View key={template.id} style={[styles.customTemplateItem, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => { Haptics.impact("light"); updateSettings({ summaryTemplate: template.id }); }}>
+                    <Text style={[styles.customTemplateName, { color: colors.foreground }]}>{template.name}</Text>
+                    <Text style={[styles.customTemplatePrompt, { color: colors.muted }]} numberOfLines={2}>{template.prompt}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDeleteTemplate(template.id)}
-                    style={styles.deleteButton}
-                  >
-                    <IconSymbol name="xmark" size={18} color={colors.error} />
+                  <TouchableOpacity onPress={() => handleDeleteTemplate(template.id)} style={styles.deleteButton}>
+                    <IconSymbol name="xmark" size={16} color={colors.error} />
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
           )}
 
-          {/* Add Custom Template Button */}
           <TouchableOpacity
             onPress={() => setShowTemplateForm(!showTemplateForm)}
-            style={[styles.addTemplateButton, { backgroundColor: colors.primary + "15" }]}
+            style={[styles.addButton, { backgroundColor: colors.primary + "15" }]}
           >
-            <IconSymbol name="plus" size={18} color={colors.primary} />
-            <Text style={[styles.addTemplateButtonText, { color: colors.primary }]}>
-              カスタムテンプレートを追加
-            </Text>
+            <IconSymbol name="plus" size={16} color={colors.primary} />
+            <Text style={[styles.addButtonText, { color: colors.primary }]}>カスタムテンプレートを追加</Text>
           </TouchableOpacity>
 
-          {/* Template Form */}
           {showTemplateForm && (
             <View style={[styles.templateForm, { backgroundColor: colors.background, borderColor: colors.border }]}>
               <Text style={[styles.formLabel, { color: colors.foreground }]}>テンプレート名</Text>
               <TextInput
-                style={[
-                  styles.textInput,
-                  { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }
-                ]}
+                style={[styles.textInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]}
                 placeholder="例: マーケティング会議"
                 placeholderTextColor={colors.muted}
                 value={newTemplateName}
                 onChangeText={setNewTemplateName}
               />
-
-              <Text style={[styles.formLabel, { color: colors.foreground, marginTop: 16 }]}>
-                プロンプト
-              </Text>
+              <Text style={[styles.formLabel, { color: colors.foreground, marginTop: 12 }]}>プロンプト</Text>
               <TextInput
-                style={[
-                  styles.textInputMultiline,
-                  { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }
-                ]}
-                placeholder="カスタマイズしたプロンプトを入力してください"
+                style={[styles.textInputMultiline, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.surface }]}
+                placeholder="カスタマイズしたプロンプトを入力"
                 placeholderTextColor={colors.muted}
                 value={newTemplatePrompt}
                 onChangeText={setNewTemplatePrompt}
                 multiline
                 numberOfLines={4}
               />
-
               <View style={styles.formButtons}>
-                <TouchableOpacity
-                  onPress={handleCreateTemplate}
-                  style={[styles.formButton, { backgroundColor: colors.primary }]}
-                >
+                <TouchableOpacity onPress={handleCreateTemplate} style={[styles.formButton, { backgroundColor: colors.primary }]}>
                   <Text style={styles.formButtonText}>作成</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowTemplateForm(false);
-                    setNewTemplateName("");
-                    setNewTemplatePrompt("");
-                  }}
-                  style={[styles.formButton, { backgroundColor: colors.muted + "20" }]}
-                >
+                <TouchableOpacity onPress={() => { setShowTemplateForm(false); setNewTemplateName(""); setNewTemplatePrompt(""); }} style={[styles.formButton, { backgroundColor: colors.muted + "20" }]}>
                   <Text style={[styles.formButtonText, { color: colors.foreground }]}>キャンセル</Text>
                 </TouchableOpacity>
               </View>
@@ -849,249 +422,49 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* Auto Processing */}
+        {/* 外観 */}
+        <SectionHeader label="外観" />
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>自動処理</Text>
-          <View style={[styles.toggleRow, { borderBottomColor: colors.border }]}>
-            <View style={styles.toggleContent}>
-              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>
-                自動文字起こし
-              </Text>
-              <Text style={[styles.toggleDescription, { color: colors.muted }]}>
-                録音完了後に自動で文字起こしを開始
-              </Text>
-            </View>
-            <Switch
-              value={settings.autoTranscribe}
-              onValueChange={() => handleToggle("autoTranscribe")}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleContent}>
-              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>自動分析</Text>
-              <Text style={[styles.toggleDescription, { color: colors.muted }]}>
-                文字起こし完了後に要約・タグ・キーワード・感情分析を自動実行
-              </Text>
-            </View>
-            <Switch
-              value={settings.autoAnalyze}
-              onValueChange={() => handleToggle("autoAnalyze")}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
+          <ToggleRow
+            label="ダークモード"
+            description="暗い環境での目の疲労を軽減"
+            value={colorScheme === "dark"}
+            onValueChange={async (value) => {
+              await setColorScheme(value ? "dark" : "light");
+              await Storage.setItem("theme-preference", value ? "dark" : "light");
+              await Haptics.impact("light");
+            }}
+            colors={colors}
+            noBorder
+          />
         </View>
 
-        {/* Realtime Transcription */}
+        {/* データ */}
+        <SectionHeader label="データ" />
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>
-              リアルタイム文字起こし
-            </Text>
-            <View style={[styles.providerBadge, { backgroundColor: colors.primary + "20" }]}>
-              <Text style={[styles.providerBadgeText, { color: colors.primary }]}>ElevenLabs 限定</Text>
-            </View>
-          </View>
-          {settings.transcriptionProvider !== "elevenlabs" && (
-            <View style={[styles.noteBox, { backgroundColor: colors.warning + "15", marginBottom: 8 }]}>
-              <IconSymbol name="exclamationmark.triangle.fill" size={16} color={colors.warning} />
-              <Text style={[styles.noteText, { color: colors.warning }]}>
-                リアルタイム文字起こしは ElevenLabs 専用です。使用するには文字起こしプロバイダを ElevenLabs に変更してください。
-              </Text>
-            </View>
-          )}
-          <View style={[styles.toggleRow, { borderBottomColor: colors.border }]}>
-            <View style={styles.toggleContent}>
-              <Text style={[styles.toggleLabel, { color: settings.transcriptionProvider !== "elevenlabs" ? colors.muted : colors.foreground }]}>
-                リアルタイムモード
-              </Text>
-              <Text style={[styles.toggleDescription, { color: colors.muted }]}>
-                録音中にリアルタイムで文字起こし結果を表示（150ms遅延）
-              </Text>
-            </View>
-            <Switch
-              value={settings.realtimeTranscription.enabled}
-              disabled={settings.transcriptionProvider !== "elevenlabs"}
-              onValueChange={() => {
-                Haptics.impact('light');
-                updateNestedSettings('realtimeTranscription', {
-                  enabled: !settings.realtimeTranscription.enabled,
-                });
-              }}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-          {settings.realtimeTranscription.enabled && (
-            <>
-              <View style={styles.toggleRow}>
-                <View style={styles.toggleContent}>
-                  <Text style={[styles.toggleLabel, { color: colors.foreground }]}>話者分離</Text>
-                  <Text style={[styles.toggleDescription, { color: colors.muted }]}>
-                    複数の話者を自動識別してラベル付け
-                  </Text>
-                </View>
-                <Switch
-                  value={settings.realtimeTranscription.enableSpeakerDiarization}
-                  onValueChange={() => {
-                    Haptics.impact('light');
-                    updateNestedSettings('realtimeTranscription', {
-                      enableSpeakerDiarization: !settings.realtimeTranscription.enableSpeakerDiarization,
-                    });
-                  }}
-                  trackColor={{ false: colors.border, true: colors.primary }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-              <View style={[styles.noteBox, { backgroundColor: colors.warning + "15" }]}>
-                <IconSymbol name="exclamationmark.triangle.fill" size={16} color={colors.warning} />
-                <Text style={[styles.noteText, { color: colors.warning }]}>
-                  リアルタイムモードはネットワーク使用量とバッテリー消費が増加します
-                </Text>
-              </View>
-            </>
-          )}
-        </View>
-
-        {/* Realtime Translation */}
-        {settings.realtimeTranscription.enabled && (
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-              リアルタイム翻訳
-            </Text>
-            <View style={[styles.toggleRow, { borderBottomColor: colors.border }]}>
-              <View style={styles.toggleContent}>
-                <Text style={[styles.toggleLabel, { color: colors.foreground }]}>
-                  翻訳を有効化
-                </Text>
-                <Text style={[styles.toggleDescription, { color: colors.muted }]}>
-                  文字起こし結果をリアルタイムで翻訳
-                </Text>
-              </View>
-              <Switch
-                value={settings.realtimeTranslation.enabled}
-                onValueChange={() => {
-                  Haptics.impact('light');
-                  updateNestedSettings('realtimeTranslation', {
-                    enabled: !settings.realtimeTranslation.enabled,
-                  });
-                }}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-            {settings.realtimeTranslation.enabled && (
-              <>
-                <Text style={[styles.optionLabel, { color: colors.muted, marginTop: 12, marginBottom: 8 }]}>
-                  翻訳先言語
-                </Text>
-                {TRANSLATION_LANGUAGES.map((lang) => (
-                  <TouchableOpacity
-                    key={lang.value}
-                    onPress={() => {
-                      Haptics.impact('light');
-                      updateNestedSettings('realtimeTranslation', { targetLanguage: lang.value });
-                    }}
-                    style={[
-                      styles.templateItem,
-                      {
-                        backgroundColor:
-                          settings.realtimeTranslation.targetLanguage === lang.value
-                            ? colors.primary + "15"
-                            : "transparent",
-                        borderColor:
-                          settings.realtimeTranslation.targetLanguage === lang.value
-                            ? colors.primary
-                            : colors.border,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.templateLabel,
-                        {
-                          color:
-                            settings.realtimeTranslation.targetLanguage === lang.value
-                              ? colors.primary
-                              : colors.foreground,
-                        },
-                      ]}
-                    >
-                      {lang.label}
-                    </Text>
-                    {settings.realtimeTranslation.targetLanguage === lang.value && (
-                      <IconSymbol name="checkmark" size={20} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-                <View style={[styles.noteBox, { backgroundColor: colors.warning + "15" }]}>
-                  <IconSymbol name="exclamationmark.triangle.fill" size={16} color={colors.warning} />
-                  <Text style={[styles.noteText, { color: colors.warning }]}>
-                    リアルタイム翻訳はAPI使用量が増加します
-                  </Text>
-                </View>
-              </>
-            )}
-          </View>
-        )}
-
-        {/* Data Management */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>データ管理</Text>
           <TouchableOpacity
             onPress={handleImport}
             disabled={importMutation.isPending}
-            style={[styles.importButton, { borderColor: colors.primary }]}
+            style={[styles.actionButton, { borderColor: colors.primary, marginBottom: 10 }]}
           >
-            {importMutation.isPending ? (
-              <Text style={[styles.importButtonText, { color: colors.primary }]}>
-                インポート中...
-              </Text>
-            ) : (
-              <>
-                <IconSymbol name="square.and.arrow.down" size={20} color={colors.primary} />
-                <Text style={[styles.importButtonText, { color: colors.primary }]}>
-                  ファイルからインポート (JSON/CSV)
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleClearData}
-            style={[styles.dangerButton, { borderColor: colors.error }]}
-          >
-            <IconSymbol name="trash.fill" size={20} color={colors.error} />
-            <Text style={[styles.dangerButtonText, { color: colors.error }]}>
-              すべてのデータを削除
+            <IconSymbol name="square.and.arrow.down" size={18} color={colors.primary} />
+            <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+              {importMutation.isPending ? "インポート中..." : "ファイルからインポート (JSON/CSV)"}
             </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleClearData} style={[styles.actionButton, { borderColor: colors.error }]}>
+            <IconSymbol name="trash.fill" size={18} color={colors.error} />
+            <Text style={[styles.actionButtonText, { color: colors.error }]}>すべてのデータを削除</Text>
           </TouchableOpacity>
         </View>
 
-        {/* App Info */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>アプリ情報</Text>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.muted }]}>バージョン</Text>
-            <Text style={[styles.infoValue, { color: colors.foreground }]}>
-              {Constants.expoConfig?.version ?? "1.4.1"}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.muted }]}>アプリ名</Text>
-            <Text style={[styles.infoValue, { color: colors.foreground }]}>
-              {Constants.expoConfig?.name ?? "Pleno Transcribe"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.muted }]}>
-            Pleno Transcribe
+        {/* アプリ情報 */}
+        <View style={[styles.footer]}>
+          <Text style={[styles.footerAppName, { color: colors.muted }]}>
+            {Constants.expoConfig?.name ?? "Pleno"} {Constants.expoConfig?.version ?? ""}
           </Text>
-          <Text style={[styles.footerSubtext, { color: colors.muted }]}>
-            音声録音・文字起こし・AI要約アプリ
+          <Text style={[styles.footerSub, { color: colors.muted }]}>
+            録音 {recordingsState.recordings.length}件
           </Text>
         </View>
       </ScrollView>
@@ -1099,386 +472,144 @@ export default function SettingsScreen() {
   );
 }
 
+// ---- 共通コンポーネント ----
+
+function SectionHeader({ label, badge, colors }: { label: string; badge?: string; colors?: any }) {
+  return (
+    <View style={sectionHeaderStyles.row}>
+      <Text style={sectionHeaderStyles.label}>{label}</Text>
+      {badge && colors && (
+        <View style={[sectionHeaderStyles.badge, { backgroundColor: colors.primary + "20" }]}>
+          <Text style={[sectionHeaderStyles.badgeText, { color: colors.primary }]}>{badge}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const sectionHeaderStyles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginTop: 20, marginBottom: 6, gap: 8 },
+  label: { fontSize: 12, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.8, color: "#888" },
+  badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  badgeText: { fontSize: 10, fontWeight: "600" },
+});
+
+function RowLabel({ label, colors }: { label: string; colors: any }) {
+  return <Text style={[rowLabelStyles.label, { color: colors.muted }]}>{label}</Text>;
+}
+
+const rowLabelStyles = StyleSheet.create({
+  label: { fontSize: 12, fontWeight: "500", marginBottom: 6 },
+});
+
+function Chip({ label, selected, onPress, colors }: { label: string; selected: boolean; onPress: () => void; colors: any }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[chipStyles.chip, { backgroundColor: selected ? colors.primary : colors.background, borderColor: selected ? colors.primary : colors.border }]}
+    >
+      <Text style={[chipStyles.text, { color: selected ? "#fff" : colors.foreground }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1 },
+  text: { fontSize: 13, fontWeight: "500" },
+});
+
+function SelectItem({ label, description, selected, onPress, colors }: { label: string; description?: string; selected: boolean; onPress: () => void; colors: any }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[selectItemStyles.item, { backgroundColor: selected ? colors.primary + "12" : "transparent", borderColor: selected ? colors.primary : colors.border }]}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={[selectItemStyles.label, { color: selected ? colors.primary : colors.foreground }]}>{label}</Text>
+        {description && <Text style={[selectItemStyles.description, { color: colors.muted }]}>{description}</Text>}
+      </View>
+      {selected && <IconSymbol name="checkmark" size={16} color={colors.primary} />}
+    </TouchableOpacity>
+  );
+}
+
+const selectItemStyles = StyleSheet.create({
+  item: { flexDirection: "row", alignItems: "center", padding: 11, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
+  label: { fontSize: 14, fontWeight: "500" },
+  description: { fontSize: 12, marginTop: 1 },
+});
+
+function ToggleRow({ label, description, value, onValueChange, colors, disabled, noBorder }: {
+  label: string; description?: string; value: boolean; onValueChange: (v: boolean) => void;
+  colors: any; disabled?: boolean; noBorder?: boolean;
+}) {
+  return (
+    <View style={[toggleRowStyles.row, !noBorder && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+      <View style={{ flex: 1 }}>
+        <Text style={[toggleRowStyles.label, { color: disabled ? colors.muted : colors.foreground }]}>{label}</Text>
+        {description && <Text style={[toggleRowStyles.description, { color: colors.muted }]}>{description}</Text>}
+      </View>
+      <Switch
+        value={value}
+        disabled={disabled}
+        onValueChange={onValueChange}
+        trackColor={{ false: colors.border, true: colors.primary }}
+        thumbColor="#FFFFFF"
+      />
+    </View>
+  );
+}
+
+const toggleRowStyles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", paddingVertical: 12 },
+  label: { fontSize: 15, fontWeight: "500" },
+  description: { fontSize: 12, marginTop: 2 },
+});
+
+function NoteBox({ icon, text, color, colors, style }: { icon: string; text: string; color: string; colors: any; style?: object }) {
+  return (
+    <View style={[noteBoxStyles.box, { backgroundColor: color + "18" }, style]}>
+      <IconSymbol name={icon as any} size={14} color={color} />
+      <Text style={[noteBoxStyles.text, { color }]}>{text}</Text>
+    </View>
+  );
+}
+
+const noteBoxStyles = StyleSheet.create({
+  box: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: 8, gap: 8 },
+  text: { flex: 1, fontSize: 12, lineHeight: 17 },
+});
+
+// ---- メインスタイル ----
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-  },
-  section: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 8,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 8,
-  },
-  providerBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  providerBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  statItem: {
-    width: "50%",
-    paddingVertical: 8,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  statLabel: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  optionGroup: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  optionButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  optionText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  optionLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  templateItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  templateContent: {
-    flex: 1,
-  },
-  templateLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  templateDescription: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  toggleContent: {
-    flex: 1,
-  },
-  toggleLabel: {
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  toggleDescription: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  importButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    gap: 8,
-    marginBottom: 12,
-  },
-  importButtonText: {
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  dangerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    gap: 8,
-  },
-  dangerButtonText: {
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  noteBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-    gap: 8,
-  },
-  noteText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  infoLabel: {
-    fontSize: 14,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  footer: {
-    alignItems: "center",
-    paddingVertical: 32,
-  },
-  footerText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  footerSubtext: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  customTemplatesSection: {
-    borderTopWidth: 1,
-    marginTop: 12,
-    paddingTop: 12,
-  },
-  subsectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  customTemplateItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 8,
-    gap: 8,
-  },
-  customTemplateName: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  customTemplatePrompt: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  deleteButton: {
-    padding: 6,
-  },
-  addTemplateButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-    marginTop: 12,
-  },
-  addTemplateButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  templateForm: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 12,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  textInputMultiline: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    textAlignVertical: "top",
-  },
-  formButtons: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 16,
-  },
-  formButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  formButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  // Extended Statistics Styles
-  statsSubsection: {
-    borderTopWidth: 1,
-    marginTop: 12,
-    paddingTop: 12,
-  },
-  statsSubsectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 24,
-  },
-  statsRowItem: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 4,
-  },
-  statsRowValue: {
-    fontSize: 24,
-    fontWeight: "700",
-  },
-  statsRowLabel: {
-    fontSize: 13,
-  },
-  progressBars: {
-    gap: 8,
-  },
-  progressBarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  progressBarLabel: {
-    width: 70,
-    fontSize: 13,
-  },
-  progressBarBg: {
-    flex: 1,
-    height: 8,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  progressBarValue: {
-    width: 40,
-    fontSize: 13,
-    fontWeight: "600",
-    textAlign: "right",
-  },
-  sentimentRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  sentimentItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  sentimentCount: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  actionStatsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  actionStatItem: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 4,
-  },
-  actionStatValue: {
-    fontSize: 24,
-    fontWeight: "700",
-  },
-  actionStatLabel: {
-    fontSize: 13,
-  },
-  actionStatBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 4,
-  },
-  actionStatBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  topTagsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  topTagItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    gap: 6,
-  },
-  topTagName: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  topTagCount: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  container: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
+  title: { fontSize: 32, fontWeight: "700" },
+  section: { marginHorizontal: 16, borderRadius: 10, padding: 14 },
+  divider: { borderTopWidth: 1, marginVertical: 8 },
+  subsection: { borderTopWidth: 1, marginTop: 10, paddingTop: 10 },
+  subsectionTitle: { fontSize: 13, fontWeight: "600", marginBottom: 8 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  actionButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 11, borderRadius: 8, borderWidth: 1, gap: 7 },
+  actionButtonText: { fontSize: 14, fontWeight: "500" },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 },
+  infoLabel: { fontSize: 13 },
+  infoValue: { fontSize: 13, fontWeight: "500" },
+  customTemplateItem: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6, gap: 8 },
+  customTemplateName: { fontSize: 13, fontWeight: "600", marginBottom: 2 },
+  customTemplatePrompt: { fontSize: 12, lineHeight: 16 },
+  deleteButton: { padding: 4 },
+  addButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 8, gap: 6, marginTop: 10 },
+  addButtonText: { fontSize: 13, fontWeight: "600" },
+  templateForm: { borderWidth: 1, borderRadius: 8, padding: 14, marginTop: 10 },
+  formLabel: { fontSize: 13, fontWeight: "600", marginBottom: 6 },
+  textInput: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14 },
+  textInputMultiline: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, textAlignVertical: "top", minHeight: 80 },
+  formButtons: { flexDirection: "row", gap: 8, marginTop: 12 },
+  formButton: { flex: 1, paddingVertical: 9, borderRadius: 6, alignItems: "center" },
+  formButtonText: { fontSize: 13, fontWeight: "600", color: "#FFFFFF" },
+  footer: { alignItems: "center", paddingVertical: 28, gap: 4 },
+  footerAppName: { fontSize: 13, fontWeight: "500" },
+  footerSub: { fontSize: 12 },
 });
