@@ -886,12 +886,25 @@ export default function SettingsScreen() {
 
         {/* Realtime Transcription */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-            リアルタイム文字起こし
-          </Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>
+              リアルタイム文字起こし
+            </Text>
+            <View style={[styles.providerBadge, { backgroundColor: colors.primary + "20" }]}>
+              <Text style={[styles.providerBadgeText, { color: colors.primary }]}>ElevenLabs 限定</Text>
+            </View>
+          </View>
+          {settings.transcriptionProvider !== "elevenlabs" && (
+            <View style={[styles.noteBox, { backgroundColor: colors.warning + "15", marginBottom: 8 }]}>
+              <IconSymbol name="exclamationmark.triangle.fill" size={16} color={colors.warning} />
+              <Text style={[styles.noteText, { color: colors.warning }]}>
+                リアルタイム文字起こしは ElevenLabs 専用です。使用するには文字起こしプロバイダを ElevenLabs に変更してください。
+              </Text>
+            </View>
+          )}
           <View style={[styles.toggleRow, { borderBottomColor: colors.border }]}>
             <View style={styles.toggleContent}>
-              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>
+              <Text style={[styles.toggleLabel, { color: settings.transcriptionProvider !== "elevenlabs" ? colors.muted : colors.foreground }]}>
                 リアルタイムモード
               </Text>
               <Text style={[styles.toggleDescription, { color: colors.muted }]}>
@@ -900,6 +913,7 @@ export default function SettingsScreen() {
             </View>
             <Switch
               value={settings.realtimeTranscription.enabled}
+              disabled={settings.transcriptionProvider !== "elevenlabs"}
               onValueChange={() => {
                 Haptics.impact('light');
                 updateNestedSettings('realtimeTranscription', {
@@ -1108,6 +1122,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 12,
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
+  },
+  providerBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  providerBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   statsGrid: {
     flexDirection: "row",
