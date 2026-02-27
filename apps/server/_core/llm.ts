@@ -1,4 +1,5 @@
 import { ENV } from "./env";
+import { getGoogleAccessToken } from "./google-auth";
 
 type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -202,18 +203,22 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
+// Vertex AI OpenAI 互換エンドポイント
+// generativelanguage.googleapis.com (AI Studio) ではなく
+// aiplatform.googleapis.com (Vertex AI) を使用することで
+// Google Cloud DPA が適用され、データの学習利用が禁止される
 const resolveApiUrl = () => {
-  return "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+  const { gcpProjectId, gcpRegion } = ENV;
+  return `https://${gcpRegion}-aiplatform.googleapis.com/v1beta1/projects/${gcpProjectId}/locations/${gcpRegion}/endpoints/openapi/chat/completions`;
 };
 
-const assertApiKey = () => {
-  if (!ENV.geminiApiKey) {
-    throw new Error("GEMINI_API_KEY is not configured");
+const assertCredentials = () => {
+  if (!ENV.googleCredentials) {
+    throw new Error("GOOGLE_CREDENTIALS is not configured");
   }
-};
-
-const getApiKey = () => {
-  return ENV.geminiApiKey;
+  if (!ENV.gcpProjectId) {
+    throw new Error("GCP_PROJECT_ID is not configured");
+  }
 };
 
 const normalizeResponseFormat = ({
@@ -257,7 +262,7 @@ const normalizeResponseFormat = ({
 };
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
+  assertCredentials();
 
   const {
     messages,
@@ -270,8 +275,13 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
+  // Vertex AI はモデル名に "google/" プレフィックスが必要
+  const model = params.model
+    ? params.model.startsWith("google/") ? params.model : `google/${params.model}`
+    : "google/gemini-2.5-flash-lite";
+
   const payload: Record<string, unknown> = {
-    model: params.model || "gemini-2.5-flash-lite",
+    model,
     messages: messages.map(normalizeMessage),
   };
 
@@ -297,6 +307,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
+  const accessToken = await getGoogleAccessToken();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60_000);
   let response: Response;
@@ -305,7 +316,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${getApiKey()}`,
+        authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(payload),
       signal: controller.signal,

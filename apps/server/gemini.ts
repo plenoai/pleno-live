@@ -1,9 +1,13 @@
 /**
- * Gemini API Client for Audio Transcription
- * Uses Gemini's multimodal capabilities to transcribe audio
+ * Vertex AI Gemini Client for Audio Transcription
+ *
+ * generativelanguage.googleapis.com (AI Studio) ではなく
+ * aiplatform.googleapis.com (Vertex AI) を使用。
+ * Google Cloud DPA により、データはモデルの学習に使用されない。
  */
 
 import { ENV } from "./_core/env";
+import { getGoogleAccessToken } from "./_core/google-auth";
 
 export interface GeminiTranscriptionOptions {
   languageCode?: string;
@@ -24,14 +28,13 @@ export async function transcribeAudioWithGemini(
   audioBase64: string,
   options: GeminiTranscriptionOptions = {}
 ): Promise<GeminiTranscriptionResponse> {
-  if (!ENV.geminiApiKey) {
-    throw new Error("GEMINI_API_KEY is not set");
+  if (!ENV.googleCredentials || !ENV.gcpProjectId) {
+    throw new Error("GOOGLE_CREDENTIALS and GCP_PROJECT_ID are required");
   }
 
   const mimeType = options.mimeType || "audio/webm";
   const languageHint = options.languageCode ? `in ${options.languageCode}` : "";
 
-  // Build the request payload
   const payload = {
     contents: [
       {
@@ -54,13 +57,15 @@ export async function transcribeAudioWithGemini(
     },
   };
 
+  const { gcpProjectId, gcpRegion } = ENV;
+  const accessToken = await getGoogleAccessToken();
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+    `https://${gcpRegion}-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${gcpRegion}/publishers/google/models/gemini-2.5-flash:generateContent`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": ENV.geminiApiKey,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(payload),
     }

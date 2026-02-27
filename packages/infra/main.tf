@@ -37,9 +37,20 @@ variable "elevenlabs_api_key" {
   sensitive = true
 }
 
-variable "gemini_api_key" {
-  type      = string
-  sensitive = true
+variable "gcp_project_id" {
+  type        = string
+  description = "Google Cloud Project ID (Vertex AI)"
+}
+
+variable "gcp_region" {
+  type    = string
+  default = "us-central1"
+}
+
+variable "google_credentials" {
+  type        = string
+  sensitive   = true
+  description = "Base64-encoded service account JSON for Vertex AI (output of gcp.tf)"
 }
 
 variable "jwt_secret" {
@@ -104,12 +115,15 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      NODE_ENV                   = "production"
-      ELEVENLABS_API_KEY         = var.elevenlabs_api_key
-      GEMINI_API_KEY             = var.gemini_api_key
-      JWT_SECRET                 = var.jwt_secret
-      APP_HMAC_SECRET            = var.app_hmac_secret
-      ALLOWED_ORIGINS            = var.allowed_origins
+      NODE_ENV           = "production"
+      ELEVENLABS_API_KEY = var.elevenlabs_api_key
+      JWT_SECRET         = var.jwt_secret
+      APP_HMAC_SECRET    = var.app_hmac_secret
+      ALLOWED_ORIGINS    = var.allowed_origins
+      # Vertex AI 認証 (Cloud DPA 適用 = データ学習利用禁止)
+      GOOGLE_CREDENTIALS = var.google_credentials
+      GCP_PROJECT_ID     = var.gcp_project_id
+      GCP_REGION         = var.gcp_region
     }
   }
 

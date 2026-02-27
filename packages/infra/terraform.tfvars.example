@@ -2,6 +2,12 @@ aws_region         = "ap-northeast-1"
 project_name       = "pleno-live-api"
 environment        = "prod"
 elevenlabs_api_key = "your-elevenlabs-api-key"
-gemini_api_key     = "your-gemini-api-key"
 jwt_secret         = "your-jwt-secret-at-least-32-bytes"
 app_hmac_secret    = "your-app-hmac-secret-at-least-32-bytes"
+
+# Vertex AI (Google Cloud DPA 適用 = データ学習利用禁止)
+# 1. gcp.tf を terraform apply して vertex_ai_credentials_base64 を取得
+# 2. その値をそのまま google_credentials にセット
+gcp_project_id     = "your-gcp-project-id"
+gcp_region         = "us-central1"
+google_credentials = "base64-encoded-service-account-json"
