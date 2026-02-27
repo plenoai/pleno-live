@@ -26,13 +26,12 @@ async function fetchWithReauth(url: RequestInfo | URL, options?: RequestInit): P
   if (urlStr.includes("auth.")) return res;
 
   await resetAndReauth();
-  return fetch(url, {
-    ...options,
-    headers: {
-      ...options?.headers,
-      ...authHeaders(),
-    },
-  });
+  const headers = new Headers(options?.headers as HeadersInit | undefined);
+  const auth = authHeaders();
+  if ("Authorization" in auth && auth.Authorization) {
+    headers.set("Authorization", auth.Authorization);
+  }
+  return fetch(url as RequestInfo, { ...options, headers });
 }
 
 export function createTRPCClient() {
