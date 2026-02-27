@@ -8,51 +8,59 @@ Expo + tRPC ボイスメモアプリ
 
 ## Structure
 ```
-app/               # Expo Router pages (クライアント)
-  (tabs)/          # Tab navigation (record, index, settings)
+app/               # Expo Router pages
+  (tabs)/          # Tab navigation (record, notes, settings)
   note/[id]        # Note detail
-apps/              # 実行可能アプリケーション
-  server/          # tRPC backend
-    _core/         # Framework (trpc, llm)
-    routers.ts     # API routes
-packages/          # 共有ライブラリ
+apps/server/       # tRPC backend
+  _core/           # Framework (trpc, llm, auth, context)
+  routers.ts       # 全ルート定義 (auth.*, ai.*)
+packages/
   components/      # UI components
   hooks/           # React hooks
   lib/             # Client utilities
   types/           # Type definitions
   constants/       # Constants
+  platform/        # OS抽象化レイヤー (後述)
   infra/           # Terraform IaC
 ```
 
 ## Tech Stack
-- Expo 54 + React Native 0.81
-- tRPC 11 + Express
-- ElevenLabs STT, Gemini AI
+- Expo 54 + React Native 0.81, tRPC 11 + Express
+- ElevenLabs STT, Gemini AI, Drizzle ORM, NativeWind + Tailwind
 
-# CI / Build Flow
+## File Index by Topic
 
-## 環境変数管理
+### Recording (録音・波形・メータリング)
+- `app/(tabs)/record.tsx`
+- `packages/lib/recording-session-context.tsx` — expo-audioとExpoPlayAudioStreamを統合・調停
+- `packages/hooks/use-background-recording.ts`, `use-recording-draft.ts`
+- `packages/platform/audio-metering/` — expo-audioによる音量メータリング
+- `packages/platform/audio-stream/` — @mykin-ai/expo-audio-stream (ExpoPlayAudioStream)
+- `packages/lib/recordings-context.tsx`
+- 注意: expo-audioとExpoPlayAudioStreamはマイク排他アクセス競合する
 
-`eas.json` を単一ソースとして管理し、CI は `jq` で読み取る:
+### Transcription (文字起こし)
+- `packages/hooks/use-realtime-transcription.ts`
+- `packages/lib/realtime-transcription.ts`
+- `packages/types/realtime-transcription.ts` — TranscriptSegment型
+- `apps/server/elevenlabs.ts`, `elevenlabs-realtime.ts`, `gemini.ts`
+- `packages/lib/settings-context.tsx` — STTプロバイダ設定
+
+### Auth (HMAC Challenge-Response)
+- Client: `packages/lib/auth.ts` (expo-crypto), `packages/lib/trpc.ts`
+- Server: `apps/server/attestation.ts`, `apps/server/_core/auth.ts`
+- Platform: `packages/platform/attestation/`
+
+## Platform Abstraction (`packages/platform/`)
+
+各モジュールは `{name}.ts` + `{name}.native.ts` + `{name}.web.ts` + `index.ts` の構成:
+`audio-metering/`, `audio-stream/`, `attestation/`, `background-task/`, `filesystem/`, `haptics/`, `permissions/`, `storage/`
+
+## CI / Build Flow
+
+環境変数は `eas.json` を単一ソースとして管理:
 ```yaml
-- name: Load env from eas.json
-  run: jq -r '.build.PROFILE.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> $GITHUB_ENV
+run: jq -r '.build.PROFILE.env | to_entries[] | "\(.key)=\(.value)"' eas.json >> $GITHUB_ENV
 ```
-- `preview` プロファイル → `preview-apk.yml`
-- `production` プロファイル → `release.yml`
-
-## Preview APK (`.github/workflows/preview-apk.yml`)
-
-- **トリガー**: `canary`ブランチへのpush、または `workflow_dispatch`
-- **ランナー**: `ubuntu-latest`（約6分で完了）
-- **最適化**: `arm64-v8a`のみビルド・R8 minify有効・lint無効・Gradleキャッシュ
-- **成果物**: GitHub Releases に `preview-{SHORT_SHA}` タグでprerelease作成
-- **固定URL**: `https://github.com/HikaruEgashira/pleno-live/releases/latest/download/pleno-live-latest.apk`
-- **古いリリース自動削除**: 最新5件を残してクリーンアップ
-
-## Release APK (`.github/workflows/release.yml`)
-
-- **トリガー**: `main`ブランチへのpush（website変更除く）
-- **ランナー**: `ubuntu-latest`
-- **成果物**: GitHub Releases に `v{VERSION}-{SHORT_SHA}` タグで正式リリース作成・APK添付
-- **古いリリース自動削除**: 最新10件を残してクリーンアップ
+- Preview APK: `.github/workflows/preview-apk.yml` (canary branch → prerelease)
+- Release APK: `.github/workflows/release.yml` (main push → 正式リリース)
