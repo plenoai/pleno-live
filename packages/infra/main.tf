@@ -52,6 +52,11 @@ variable "app_hmac_secret" {
   sensitive = true
 }
 
+variable "allowed_origins" {
+  type    = string
+  default = "https://plenoai.com"
+}
+
 locals {
   function_name = "${var.project_name}-${var.environment}"
 }
@@ -102,8 +107,9 @@ resource "aws_lambda_function" "api" {
       NODE_ENV                   = "production"
       ELEVENLABS_API_KEY         = var.elevenlabs_api_key
       GEMINI_API_KEY             = var.gemini_api_key
-      JWT_SECRET       = var.jwt_secret
-      APP_HMAC_SECRET  = var.app_hmac_secret
+      JWT_SECRET                 = var.jwt_secret
+      APP_HMAC_SECRET            = var.app_hmac_secret
+      ALLOWED_ORIGINS            = var.allowed_origins
     }
   }
 
