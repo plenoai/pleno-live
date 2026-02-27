@@ -54,7 +54,10 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
           "ecr:CompleteLayerUpload",
           "ecr:PutImage"
         ]
-        Resource = aws_ecr_repository.api.arn
+        Resource = [
+          aws_ecr_repository.api.arn,
+          aws_ecr_repository.runner.arn,
+        ]
       }
     ]
   })
