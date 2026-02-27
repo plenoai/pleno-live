@@ -405,6 +405,46 @@ ${input.transcriptText}`,
         return { answer };
       }),
 
+    // Refine realtime transcript segments to natural text without changing meaning
+    refineTranscript: protectedProcedure
+      .input(z.object({
+        segments: z.array(z.object({
+          id: z.string(),
+          text: z.string(),
+          speaker: z.string().optional(),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        const text = input.segments.map(s => s.text).join(" ");
+
+        const result = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: [
+                "あなたは音声認識の文字起こし結果を校正するアシスタントです。",
+                "以下のルールを厳守してください：",
+                "- 元の意味・内容・語順を最大限保持する",
+                "- 明らかな誤字・脱字・助詞の誤りのみ修正する",
+                "- 言葉の追加・削除・言い換えは行わない",
+                "- 句読点を適切に補う程度に留める",
+                "- テキストのみ返す（説明・コメント不要）",
+              ].join("\n"),
+            },
+            {
+              role: "user",
+              content: text,
+            },
+          ],
+          maxTokens: 500,
+        });
+
+        const content = result.choices[0]?.message?.content;
+        const refined = typeof content === "string" ? content.trim() : text;
+
+        return { refined, originalIds: input.segments.map(s => s.id) };
+      }),
+
     // Generate realtime transcription token
     generateRealtimeToken: protectedProcedure
       .mutation(async () => {

@@ -19,6 +19,7 @@ import { useColors } from "@/packages/hooks/use-colors";
 import { useResponsive } from "@/packages/hooks/use-responsive";
 import { useRecordingSession } from "@/packages/lib/recording-session-context";
 import { useTranslation } from "@/packages/lib/i18n/context";
+import { useTranscriptRefinement } from "@/packages/hooks/use-transcript-refinement";
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -53,12 +54,14 @@ export default function RecordScreen() {
     state,
     pulseAnim,
     realtimeState,
-    mergedSegments,
+    mergedSegments: rawMergedSegments,
     getTranslation,
     getTranslationStatus,
     isTranslating,
     startRecording,
   } = useRecordingSession();
+
+  const mergedSegments = useTranscriptRefinement(rawMergedSegments);
 
   const {
     isRecording,
