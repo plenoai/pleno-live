@@ -119,6 +119,7 @@ const config: ExpoConfig = {
       {
         android: {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
+          extraProguardRules: "-dontwarn expo.modules.kotlin.runtime.Runtime",
         },
       },
     ],
