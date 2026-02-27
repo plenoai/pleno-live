@@ -25,6 +25,7 @@ import { useResponsive } from "@/packages/hooks/use-responsive";
 import { useSettings } from "@/packages/lib/settings-context";
 import { QAMessage } from "@/packages/types/recording";
 import { trpc } from "@/packages/lib/trpc";
+import { useMoonshineModel } from "@/packages/hooks/use-moonshine-model";
 import { GlobalRecordingBar } from "@/packages/components/global-recording-bar";
 
 type TabType = "audio" | "transcript" | "summary" | "qa";
@@ -77,6 +78,7 @@ export default function NoteDetailScreen() {
   const waveformBarCount = Math.floor((screenWidth - 72) / 8);
   const { getRecording, updateRecording, setTranscript, setAnalysis, addQAMessage, addHighlight } = useRecordings();
   const { settings } = useSettings();
+  const { transcribeWaveform, isSupported: isMoonshineSupported } = useMoonshineModel();
 
   const [activeTab, setActiveTab] = useState<TabType>("audio");
   const [isPlaying, setIsPlaying] = useState(false);
@@ -283,6 +285,31 @@ export default function NoteDetailScreen() {
             filename = recording.audioUri.split("/").pop() || "recording.m4a";
           }
         }
+      }
+
+      // Moonshine: ローカルモデルで直接デコード（サーバー不要）
+      if (settings.transcriptionProvider === "moonshine-local") {
+        if (!isMoonshineSupported) {
+          throw new Error("Moonshine は iOS/Android 専用です");
+        }
+        if (!recording.audioUri) {
+          throw new Error("音声ファイルが見つかりません");
+        }
+        // react-native-audio-api で音声ファイルをデコードして16kHz Float32Array 波形を取得
+        const { AudioContext } = await import("react-native-audio-api");
+        const audioContext = new AudioContext();
+        const response = await fetch(recording.audioUri);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        const waveform = audioBuffer.getChannelData(0); // Float32Array
+        const text = await transcribeWaveform(waveform);
+        setTranscript(recording.id, {
+          text,
+          segments: [],
+          language: "en",
+          processedAt: new Date(),
+        });
+        return;
       }
 
       if (!audioBase64) {

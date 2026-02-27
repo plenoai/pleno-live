@@ -5,7 +5,7 @@ import type { WhisperModelSize } from '@/packages/lib/whisper/whisper-types';
 const SETTINGS_KEY = 'app-settings';
 
 export type Language = 'ja' | 'en' | 'auto';
-export type TranscriptionProvider = 'elevenlabs' | 'gemini' | 'whisper-local';
+export type TranscriptionProvider = 'elevenlabs' | 'gemini' | 'whisper-local' | 'moonshine-local';
 export type { WhisperModelSize };
 
 export interface SettingsState {
