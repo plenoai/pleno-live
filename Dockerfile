@@ -18,9 +18,9 @@ COPY tsconfig.json ./
 RUN pnpm install --frozen-lockfile
 
 # Build main application (CommonJS for Lambda compatibility)
+# jose v6 is ESM-only, so we bundle all deps to avoid require() of ESM errors
 RUN npx esbuild apps/server/_core/index.ts \
     --platform=node \
-    --packages=external \
     --bundle \
     --format=cjs \
     --outfile=dist/index.js
