@@ -8,25 +8,6 @@
 # Google AI Studio (generativelanguage.googleapis.com) ではこの保証がないため、
 # このプロジェクトでは Vertex AI を使用する。
 
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
-    }
-  }
-}
-
-variable "gcp_project_id" {
-  description = "Google Cloud Project ID"
-  type        = string
-}
-
-variable "gcp_region" {
-  description = "Google Cloud region for Vertex AI"
-  default     = "us-central1"
-}
-
 provider "google" {
   project = var.gcp_project_id
   region  = var.gcp_region
