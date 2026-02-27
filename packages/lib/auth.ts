@@ -36,6 +36,7 @@ let expiresAt: number | null = null;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 let initialized = false;
 let trpcClientRef: TRPCClient | null = null;
+let reauthPromise: Promise<void> | null = null;
 
 function generateUUID(): string {
   const bytes = new Array(16);
@@ -186,14 +187,22 @@ export function isAuthInitialized(): boolean {
 }
 
 export async function resetAndReauth(): Promise<void> {
-  sessionToken = null;
-  expiresAt = null;
-  initialized = false;
-  if (refreshTimer) {
-    clearTimeout(refreshTimer);
-    refreshTimer = null;
-  }
-  await Storage.removeItem(STORE_KEY_SESSION_TOKEN);
-  await Storage.removeItem(STORE_KEY_EXPIRES_AT);
-  await initializeAuth();
+  if (reauthPromise) return reauthPromise;
+
+  reauthPromise = (async () => {
+    sessionToken = null;
+    expiresAt = null;
+    initialized = false;
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
+    }
+    await Storage.removeItem(STORE_KEY_SESSION_TOKEN);
+    await Storage.removeItem(STORE_KEY_EXPIRES_AT);
+    await initializeAuth();
+  })().finally(() => {
+    reauthPromise = null;
+  });
+
+  return reauthPromise;
 }

@@ -19,17 +19,20 @@ export const trpc = createTRPCReact<AppRouter>();
 
 async function fetchWithReauth(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
   const res = await fetch(url, options);
-  if (res.status === 401) {
-    await resetAndReauth();
-    return fetch(url, {
-      ...options,
-      headers: {
-        ...options?.headers,
-        ...authHeaders(),
-      },
-    });
-  }
-  return res;
+  if (res.status !== 401) return res;
+
+  // auth.*エンドポイント自体への401は再試行しない（無限ループ防止）
+  const urlStr = typeof url === "string" ? url : url.toString();
+  if (urlStr.includes("auth.")) return res;
+
+  await resetAndReauth();
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...options?.headers,
+      ...authHeaders(),
+    },
+  });
 }
 
 export function createTRPCClient() {
