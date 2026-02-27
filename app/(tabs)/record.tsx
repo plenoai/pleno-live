@@ -232,7 +232,11 @@ export default function RecordScreen() {
                   話し始めると、ここに文字起こし結果が表示されます...
                 </Text>
               ) : (
-                mergedSegments.map((segment) => {
+                mergedSegments
+                .filter((segment, index) =>
+                  !segment.isPartial || index === mergedSegments.length - 1
+                )
+                .map((segment) => {
                   const translation = translationEnabled ? getTranslation(segment.id) : undefined;
                   const translationStatus = translationEnabled ? getTranslationStatus(segment.id) : undefined;
 
