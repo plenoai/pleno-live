@@ -43,7 +43,7 @@ const TRANSCRIPTION_PROVIDERS: { value: TranscriptionProvider; label: string; de
   { value: "elevenlabs", label: "ElevenLabs", description: "高精度・話者分離対応" },
   { value: "gemini", label: "Gemini", description: "Googleマルチモーダル" },
   { value: "whisper-local", label: "Whisper", description: "オフライン・プライバシー重視" },
-  { value: "moonshine-local", label: "Moonshine", description: "オフライン・高速 (Web/iOS/Android)" },
+  { value: "moonshine-local", label: "Moonshine", description: "オフライン・高速 (Web専用)" },
 ];
 
 const TEMPLATES: { value: SummaryTemplate; label: string; description: string }[] = [
