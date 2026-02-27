@@ -14,12 +14,14 @@ import Constants from "expo-constants";
 
 import { ScreenContainer } from "@/packages/components/screen-container";
 import { Haptics, Storage } from "@/packages/platform";
-import { IconSymbol } from "@/packages/components/ui/icon-symbol";
+import { IconSymbol, type IconSymbolName } from "@/packages/components/ui/icon-symbol";
 import { useRecordings } from "@/packages/lib/recordings-context";
 import { useColors } from "@/packages/hooks/use-colors";
 import { useThemeContext } from "@/packages/lib/theme-provider";
 import { trpc } from "@/packages/lib/trpc";
 import { useWhisperModel } from "@/packages/hooks/use-whisper-model";
+import { useMoonshineModel } from "@/packages/hooks/use-moonshine-model";
+import { recommendModelTier, type ModelRecommendation } from "@/packages/lib/device-model-recommendation";
 import { useSettings, type Language, type TranscriptionProvider } from "@/packages/lib/settings-context";
 
 type SummaryTemplate = "general" | "meeting" | "interview" | "lecture" | string;
@@ -41,6 +43,7 @@ const TRANSCRIPTION_PROVIDERS: { value: TranscriptionProvider; label: string; de
   { value: "elevenlabs", label: "ElevenLabs", description: "高精度・話者分離対応" },
   { value: "gemini", label: "Gemini", description: "Googleマルチモーダル" },
   { value: "whisper-local", label: "Whisper", description: "オフライン・プライバシー重視" },
+  { value: "moonshine-local", label: "Moonshine", description: "オフライン・英語特化・高速 (iOS/Android)" },
 ];
 
 const TEMPLATES: { value: SummaryTemplate; label: string; description: string }[] = [
@@ -75,6 +78,18 @@ export default function SettingsScreen() {
     isWebGPUSupported,
     isSupported: isWhisperSupported,
   } = useWhisperModel();
+
+  const {
+    state: moonshineState,
+    isSupported: isMoonshineSupported,
+  } = useMoonshineModel();
+
+  const [modelRecommendation, setModelRecommendation] = useState<ModelRecommendation | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    recommendModelTier().then(setModelRecommendation).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -220,9 +235,11 @@ export default function SettingsScreen() {
 
           {/* 文字起こしプロバイダ */}
           <RowLabel label="文字起こしプロバイダ" colors={colors} />
-          {TRANSCRIPTION_PROVIDERS.filter(
-            (p) => p.value !== "whisper-local" || (Platform.OS === "web" && isWhisperSupported)
-          ).map((provider) => (
+          {TRANSCRIPTION_PROVIDERS.filter((p) => {
+            if (p.value === "whisper-local") return Platform.OS === "web" && isWhisperSupported;
+            if (p.value === "moonshine-local") return isMoonshineSupported;
+            return true;
+          }).map((provider) => (
             <SelectItem
               key={provider.value}
               label={provider.label}
@@ -270,6 +287,43 @@ export default function SettingsScreen() {
                   <IconSymbol name="arrow.down.circle" size={18} color={colors.primary} />
                   <Text style={[styles.actionButtonText, { color: colors.primary }]}>モデルをダウンロード</Text>
                 </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Moonshine詳細設定 - Native Only */}
+          {isMoonshineSupported && settings.transcriptionProvider === "moonshine-local" && (
+            <View style={[styles.subsection, { borderTopColor: colors.border }]}>
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: colors.muted }]}>モデル</Text>
+                <Text style={[styles.infoValue, { color: colors.foreground }]}>Moonshine Tiny (~149MB)</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: colors.muted }]}>対応言語</Text>
+                <Text style={[styles.infoValue, { color: colors.foreground }]}>英語のみ</Text>
+              </View>
+              {modelRecommendation && (
+                <NoteBox
+                  icon={modelRecommendation.tier === "tiny" ? "checkmark.circle.fill" : "info.circle.fill"}
+                  text={`端末推奨: ${modelRecommendation.tier} モデル（${modelRecommendation.reason}）`}
+                  color={modelRecommendation.tier === "tiny" ? colors.success : colors.primary}
+                  colors={colors}
+                />
+              )}
+              {moonshineState.isGenerating && (
+                <NoteBox icon="waveform" text="推論中..." color={colors.primary} colors={colors} />
+              )}
+              {moonshineState.error && (
+                <NoteBox icon="exclamationmark.circle.fill" text={moonshineState.error} color={colors.error} colors={colors} />
+              )}
+              {moonshineState.isReady && !moonshineState.isGenerating && !moonshineState.error && (
+                <NoteBox icon="checkmark.circle.fill" text="モデル準備完了" color={colors.success} colors={colors} />
+              )}
+              {!moonshineState.isReady && moonshineState.downloadProgress > 0 && (
+                <NoteBox icon="arrow.down.circle.fill" text={`ダウンロード中... ${Math.round(moonshineState.downloadProgress * 100)}%`} color={colors.primary} colors={colors} />
+              )}
+              {!moonshineState.isReady && moonshineState.downloadProgress === 0 && (
+                <NoteBox icon="info.circle.fill" text="文字起こし時に自動でモデルがダウンロードされます" color={colors.muted} colors={colors} />
               )}
             </View>
           )}
@@ -474,7 +528,9 @@ export default function SettingsScreen() {
 
 // ---- 共通コンポーネント ----
 
-function SectionHeader({ label, badge, colors }: { label: string; badge?: string; colors?: any }) {
+type Colors = ReturnType<typeof useColors>;
+
+function SectionHeader({ label, badge, colors }: { label: string; badge?: string; colors?: Colors }) {
   return (
     <View style={sectionHeaderStyles.row}>
       <Text style={sectionHeaderStyles.label}>{label}</Text>
@@ -494,7 +550,7 @@ const sectionHeaderStyles = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: "600" },
 });
 
-function RowLabel({ label, colors }: { label: string; colors: any }) {
+function RowLabel({ label, colors }: { label: string; colors: Colors }) {
   return <Text style={[rowLabelStyles.label, { color: colors.muted }]}>{label}</Text>;
 }
 
@@ -502,7 +558,7 @@ const rowLabelStyles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: "500", marginBottom: 6 },
 });
 
-function Chip({ label, selected, onPress, colors }: { label: string; selected: boolean; onPress: () => void; colors: any }) {
+function Chip({ label, selected, onPress, colors }: { label: string; selected: boolean; onPress: () => void; colors: Colors }) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -518,7 +574,7 @@ const chipStyles = StyleSheet.create({
   text: { fontSize: 13, fontWeight: "500" },
 });
 
-function SelectItem({ label, description, selected, onPress, colors }: { label: string; description?: string; selected: boolean; onPress: () => void; colors: any }) {
+function SelectItem({ label, description, selected, onPress, colors }: { label: string; description?: string; selected: boolean; onPress: () => void; colors: Colors }) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -541,7 +597,7 @@ const selectItemStyles = StyleSheet.create({
 
 function ToggleRow({ label, description, value, onValueChange, colors, disabled, noBorder }: {
   label: string; description?: string; value: boolean; onValueChange: (v: boolean) => void;
-  colors: any; disabled?: boolean; noBorder?: boolean;
+  colors: Colors; disabled?: boolean; noBorder?: boolean;
 }) {
   return (
     <View style={[toggleRowStyles.row, !noBorder && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
@@ -566,10 +622,10 @@ const toggleRowStyles = StyleSheet.create({
   description: { fontSize: 12, marginTop: 2 },
 });
 
-function NoteBox({ icon, text, color, colors, style }: { icon: string; text: string; color: string; colors: any; style?: object }) {
+function NoteBox({ icon, text, color, colors, style }: { icon: string; text: string; color: string; colors: Colors; style?: object }) {
   return (
     <View style={[noteBoxStyles.box, { backgroundColor: color + "18" }, style]}>
-      <IconSymbol name={icon as any} size={14} color={color} />
+      <IconSymbol name={icon as IconSymbolName} size={14} color={color} />
       <Text style={[noteBoxStyles.text, { color }]}>{text}</Text>
     </View>
   );

@@ -13,7 +13,6 @@ import { SystemAudioStream, AudioSource } from "@/packages/lib/system-audio-stre
 
 import { ScreenContainer } from "@/packages/components/screen-container";
 import { IconSymbol, type IconSymbolName } from "@/packages/components/ui/icon-symbol";
-import { Button } from "@/packages/components/ui/button";
 import { Badge } from "@/packages/components/ui/badge";
 import { useColors } from "@/packages/hooks/use-colors";
 import { useResponsive } from "@/packages/hooks/use-responsive";
