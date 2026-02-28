@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.12.3)'
+        required: true
 
 permissions:
   contents: write
@@ -42,7 +47,8 @@ jobs:
         env:
           APP_HMAC_SECRET: ${{ secrets.APP_HMAC_SECRET }}
         run: |
-          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("\n"; "") | gsub("\r"; ""))"' eas.json | envsubst >> $GITHUB_ENV
+          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("
+"; "") | gsub(""; ""))"' eas.json | envsubst >> $GITHUB_ENV
 
       - name: Expo prebuild
         run: npx expo prebuild --platform android --clean
@@ -77,7 +83,7 @@ jobs:
       - name: Get version
         id: version
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG="${{ inputs.tag || github.ref_name }}"
           VERSION="${TAG#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
@@ -91,6 +97,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
           generate_release_notes: true
           make_latest: true
