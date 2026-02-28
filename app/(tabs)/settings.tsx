@@ -20,7 +20,7 @@ import { useColors } from "@/packages/hooks/use-colors";
 import { useThemeContext } from "@/packages/lib/theme-provider";
 import { trpc } from "@/packages/lib/trpc";
 import { useWhisperModel } from "@/packages/hooks/use-whisper-model";
-import { useMoonshineModel } from "@/packages/hooks/use-moonshine-model";
+import { useMoonshine } from "@/packages/lib/moonshine-context";
 import { recommendModelTier, type ModelRecommendation } from "@/packages/lib/device-model-recommendation";
 import { useSettings, type Language, type TranscriptionProvider } from "@/packages/lib/settings-context";
 
@@ -82,7 +82,7 @@ export default function SettingsScreen() {
   const {
     state: moonshineState,
     isSupported: isMoonshineSupported,
-  } = useMoonshineModel();
+  } = useMoonshine();
 
   const [modelRecommendation, setModelRecommendation] = useState<ModelRecommendation | null>(null);
 
