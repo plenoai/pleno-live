@@ -25,7 +25,6 @@ import { useResponsive } from "@/packages/hooks/use-responsive";
 import { useSettings } from "@/packages/lib/settings-context";
 import { QAMessage } from "@/packages/types/recording";
 import { trpc } from "@/packages/lib/trpc";
-import { useMoonshineModel } from "@/packages/hooks/use-moonshine-model";
 import { GlobalRecordingBar } from "@/packages/components/global-recording-bar";
 
 type TabType = "audio" | "transcript" | "summary" | "qa";
@@ -78,7 +77,6 @@ export default function NoteDetailScreen() {
   const waveformBarCount = Math.floor((screenWidth - 72) / 8);
   const { getRecording, updateRecording, setTranscript, setAnalysis, addQAMessage, addHighlight } = useRecordings();
   const { settings } = useSettings();
-  const { transcribeWaveform, isSupported: isMoonshineSupported } = useMoonshineModel();
 
   const [activeTab, setActiveTab] = useState<TabType>("audio");
   const [isPlaying, setIsPlaying] = useState(false);
@@ -287,26 +285,29 @@ export default function NoteDetailScreen() {
         }
       }
 
-      // Moonshine: ローカルモデルで直接デコード（サーバー不要）
+      // Moonshine: ネイティブではフック専用API(useSpeechToText)が必要だが、
+      // 詳細画面でフックを呼ぶとマウント時にモデル初期化が走り画面がクラッシュする。
+      // ネイティブでは録音画面のリアルタイム文字起こしでのみ利用可能。
+      if (settings.transcriptionProvider === "moonshine-local" && Platform.OS !== "web") {
+        throw new Error("Moonshine ローカル文字起こしは録音中のみ利用できます。設定からプロバイダを変更してください。");
+      }
+
       if (settings.transcriptionProvider === "moonshine-local") {
-        if (!isMoonshineSupported) {
-          throw new Error("Moonshine は iOS/Android 専用です");
-        }
-        if (!recording.audioUri) {
-          throw new Error("音声ファイルが見つかりません");
-        }
-        // react-native-audio-api で音声ファイルをデコードして16kHz Float32Array 波形を取得
+        const { pipeline } = await import("@huggingface/transformers");
+        const pipe = await pipeline("automatic-speech-recognition", "UsefulSensors/moonshine-tiny-ja");
         const { AudioContext } = await import("react-native-audio-api");
         const audioContext = new AudioContext();
-        const response = await fetch(recording.audioUri);
-        const arrayBuffer = await response.arrayBuffer();
+        const res = await fetch(recording.audioUri);
+        const arrayBuffer = await res.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        const waveform = audioBuffer.getChannelData(0); // Float32Array
-        const text = await transcribeWaveform(waveform);
+        const waveform = audioBuffer.getChannelData(0);
+        const result = await (pipe as (input: { array: Float32Array; sampling_rate: number }) => Promise<{ text: string }>)(
+          { array: waveform, sampling_rate: 16000 }
+        );
         setTranscript(recording.id, {
-          text,
+          text: result.text,
           segments: [],
-          language: "en",
+          language: "ja",
           processedAt: new Date(),
         });
         return;

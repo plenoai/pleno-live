@@ -9,7 +9,7 @@
  * - ストリーミング: チャンクを蓄積してバッチ推論
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { MoonshineModelState, UseMoonshineModelReturn } from "./use-moonshine-model";
 
 export { type MoonshineModelState, type UseMoonshineModelReturn };
@@ -56,16 +56,9 @@ export function useMoonshineModel(): UseMoonshineModelReturn {
     return pipe;
   }, []);
 
-  // 初回マウント時にバックグラウンドでロード開始
-  useEffect(() => {
-    ensurePipeline().catch((err) => {
-      setState((prev) => ({
-        ...prev,
-        error: err instanceof Error ? err.message : "モデルのロードに失敗しました",
-        downloadProgress: 0,
-      }));
-    });
-  }, [ensurePipeline]);
+  // パイプラインは transcribeWaveform / startStreaming 呼び出し時に遅延ロードする。
+  // 詳細画面など、Moonshine を使わない画面でもマウント時に巨大モデルをダウンロード
+  // してしまう問題を防ぐ。
 
   const transcribeWaveform = useCallback(
     async (waveform: Float32Array): Promise<string> => {
