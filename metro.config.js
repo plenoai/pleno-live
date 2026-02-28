@@ -5,16 +5,6 @@ const path = require("path");
 
 const config = getDefaultConfig(__dirname);
 
-// onnxruntime-web の全ビルド (CJS/ESM 共に) に Metro 非対応の import() が含まれる。
-// web ビルド時は空モジュールとして解決し、バンドル解析エラーを回避する。
-// ランタイムエラーは use-moonshine-model.web.ts の catch でハンドリングされる。
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (platform === "web" && moduleName === "onnxruntime-web") {
-    return { type: "empty" };
-  }
-  return context.resolveRequest(context, moduleName, platform);
-};
-
 // モバイルビルドではwebsiteディレクトリを除外して軽量化
 const isWeb = process.env.EXPO_OS === "web" || process.argv.includes("--platform=web");
 if (!isWeb) {

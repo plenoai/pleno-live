@@ -1,6 +1,6 @@
 {
   "name": "pleno-live",
-  "version": "1.12.2",
+  "version": "1.12.1",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -22,8 +22,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
-    "@huggingface/transformers": "^3.8.1",
-    "@mykin-ai/expo-audio-stream": "^0.3.5",
+"@mykin-ai/expo-audio-stream": "^0.3.5",
     "@radix-ui/react-slot": "^1.2.4",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
