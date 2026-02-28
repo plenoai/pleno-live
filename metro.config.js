@@ -5,14 +5,12 @@ const path = require("path");
 
 const config = getDefaultConfig(__dirname);
 
-// onnxruntime-web の ESM ビルド (import(/*webpackIgnore*/e)) は Metro 非対応。
-// package.json exports の "require" 条件 (CJS/UMD) にリダイレクトして解決する。
+// onnxruntime-web の全ビルド (CJS/ESM 共に) に Metro 非対応の import() が含まれる。
+// web ビルド時は空モジュールとして解決し、バンドル解析エラーを回避する。
+// ランタイムエラーは use-moonshine-model.web.ts の catch でハンドリングされる。
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === "onnxruntime-web") {
-    return {
-      filePath: path.resolve(__dirname, "node_modules/onnxruntime-web/dist/ort.min.js"),
-      type: "sourceFile",
-    };
+  if (platform === "web" && moduleName === "onnxruntime-web") {
+    return { type: "empty" };
   }
   return context.resolveRequest(context, moduleName, platform);
 };
