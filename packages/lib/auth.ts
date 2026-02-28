@@ -125,7 +125,12 @@ async function computeResponseHash(nonce: string): Promise<string> {
       .join("");
   }
 
-  return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, input);
+  try {
+    return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, input);
+  } catch (e) {
+    console.error("[Auth] computeResponseHash failed", { platform: Platform.OS, error: String(e) });
+    throw e;
+  }
 }
 
 async function performAuthFlow(): Promise<void> {
@@ -149,6 +154,7 @@ async function performAuthFlow(): Promise<void> {
   });
 
   if (!result.success || !result.sessionToken) {
+    console.error("[Auth] verifyAttestation rejected", { error: result.error, platform: Platform.OS });
     throw new Error(result.error || "Authentication failed");
   }
 

@@ -15,7 +15,9 @@ import { generateRealtimeToken } from "./elevenlabs-realtime";
 
 const authRouter = router({
   createChallenge: publicProcedure.mutation(async () => {
+    console.log("[Auth] createChallenge called");
     const { nonce, challengeToken } = await createChallenge();
+    console.log("[Auth] createChallenge success");
     return { nonce, challengeToken };
   }),
 
@@ -27,8 +29,10 @@ const authRouter = router({
       deviceId: z.string(),
     }))
     .mutation(async ({ input }) => {
+      console.log("[Auth] verifyAttestation called", { platform: input.platform, deviceId: input.deviceId });
       const result = await verifyClientResponse(input.challengeToken, input.responseHash);
       if (!result.ok) {
+        console.error("[Auth] verifyAttestation failed", { error: result.error, platform: input.platform });
         return { success: false as const, error: result.error, sessionToken: null, expiresAt: 0 };
       }
 
@@ -39,6 +43,7 @@ const authRouter = router({
 
       const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
 
+      console.log("[Auth] verifyAttestation success", { platform: input.platform });
       return { success: true as const, sessionToken, expiresAt };
     }),
 });
