@@ -1,6 +1,7 @@
 import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
 import { Storage } from "@/packages/platform/storage";
+import { Passkey } from "@/packages/platform/passkey";
 
 const STORE_KEY_SESSION_TOKEN = "auth.sessionToken";
 const STORE_KEY_EXPIRES_AT = "auth.expiresAt";
@@ -8,6 +9,7 @@ const STORE_KEY_DEVICE_ID = "auth.deviceId";
 
 const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 
+// Legacy HMAC secret - used only for Passkey非対応デバイスへのフォールバック
 const APP_HMAC_SECRET = process.env.EXPO_PUBLIC_APP_HMAC_SECRET || "";
 
 type TRPCClient = {
@@ -21,6 +23,41 @@ type TRPCClient = {
         challengeToken: string;
         platform: string;
         deviceId: string;
+      }) => Promise<{
+        success: boolean;
+        sessionToken: string | null;
+        expiresAt: number;
+        error?: string;
+      }>;
+    };
+    beginRegistration: {
+      mutate: (input: { deviceId: string; platform: string }) => Promise<{
+        options: Record<string, unknown>;
+        challengeToken: string;
+      }>;
+    };
+    completeRegistration: {
+      mutate: (input: {
+        challengeToken: string;
+        response: unknown;
+        platform: string;
+      }) => Promise<{
+        success: boolean;
+        sessionToken: string | null;
+        expiresAt: number;
+        error?: string;
+      }>;
+    };
+    beginAuthentication: {
+      mutate: (input: { deviceId: string }) => Promise<{
+        options: Record<string, unknown>;
+        challengeToken: string;
+      } | null>;
+    };
+    completeAuthentication: {
+      mutate: (input: {
+        challengeToken: string;
+        response: unknown;
       }) => Promise<{
         success: boolean;
         sessionToken: string | null;
@@ -133,7 +170,11 @@ async function computeResponseHash(nonce: string): Promise<string> {
   }
 }
 
-async function performAuthFlow(): Promise<void> {
+/**
+ * レガシーHMACフロー - Passkey非対応デバイス向けフォールバック
+ * @deprecated Passkey移行完了後に削除予定
+ */
+async function performHMACFallbackFlow(): Promise<void> {
   if (!trpcClientRef) return;
   if (!APP_HMAC_SECRET) {
     if (__DEV__) return;
@@ -141,9 +182,7 @@ async function performAuthFlow(): Promise<void> {
   }
 
   const deviceId = await getOrCreateDeviceId();
-  const { nonce, challengeToken } =
-    await trpcClientRef.auth.createChallenge.mutate();
-
+  const { nonce, challengeToken } = await trpcClientRef.auth.createChallenge.mutate();
   const responseHash = await computeResponseHash(nonce);
 
   const result = await trpcClientRef.auth.verifyAttestation.mutate({
@@ -154,8 +193,60 @@ async function performAuthFlow(): Promise<void> {
   });
 
   if (!result.success || !result.sessionToken) {
-    console.error("[Auth] verifyAttestation rejected", { error: result.error, platform: Platform.OS });
+    console.error("[Auth] HMAC verifyAttestation rejected", { error: result.error, platform: Platform.OS });
     throw new Error(result.error || "Authentication failed");
+  }
+
+  await storeSession(result.sessionToken, result.expiresAt);
+  scheduleRefresh();
+}
+
+async function performAuthFlow(): Promise<void> {
+  if (!trpcClientRef) return;
+
+  const passkeySupported = Passkey.isSupported();
+  if (!passkeySupported) {
+    console.log("[Auth] Passkey not supported, falling back to HMAC");
+    return performHMACFallbackFlow();
+  }
+
+  const deviceId = await getOrCreateDeviceId();
+  const platform = Platform.OS;
+
+  // 既存デバイス: 認証を試みる
+  const authBegin = await trpcClientRef.auth.beginAuthentication.mutate({ deviceId });
+
+  if (authBegin) {
+    try {
+      const assertion = await Passkey.authenticate(authBegin.options as any);
+      const result = await trpcClientRef.auth.completeAuthentication.mutate({
+        challengeToken: authBegin.challengeToken,
+        response: assertion,
+      });
+
+      if (!result.success || !result.sessionToken) {
+        throw new Error(result.error || "Authentication failed");
+      }
+
+      await storeSession(result.sessionToken, result.expiresAt);
+      scheduleRefresh();
+      return;
+    } catch (e) {
+      console.error("[Auth] Passkey authentication failed, attempting re-registration", { error: String(e) });
+    }
+  }
+
+  // 新規デバイスまたは再登録
+  const regBegin = await trpcClientRef.auth.beginRegistration.mutate({ deviceId, platform });
+  const attestation = await Passkey.register(regBegin.options as any);
+  const result = await trpcClientRef.auth.completeRegistration.mutate({
+    challengeToken: regBegin.challengeToken,
+    response: attestation,
+    platform,
+  });
+
+  if (!result.success || !result.sessionToken) {
+    throw new Error(result.error || "Registration failed");
   }
 
   await storeSession(result.sessionToken, result.expiresAt);
@@ -177,7 +268,6 @@ export async function initializeAuth(): Promise<void> {
     return;
   }
 
-  if (!APP_HMAC_SECRET && __DEV__) return;
   if (!trpcClientRef) return;
 
   await performAuthFlow();

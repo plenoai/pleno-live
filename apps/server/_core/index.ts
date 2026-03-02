@@ -44,6 +44,34 @@ function createApp() {
     res.json({ ok: true, timestamp: Date.now() });
   });
 
+  // WebAuthn Associated Domains / Digital Asset Links
+  // Required for native Passkeys on iOS (Associated Domains) and Android (Digital Asset Links)
+  app.get("/.well-known/apple-app-site-association", (_req, res) => {
+    const appId = process.env.APPLE_APP_ID || "";
+    res.json({
+      webcredentials: {
+        apps: appId ? [appId] : [],
+      },
+    });
+  });
+
+  app.get("/.well-known/assetlinks.json", (_req, res) => {
+    const packageName = process.env.ANDROID_PACKAGE_NAME || "";
+    const sha256Cert = process.env.ANDROID_SHA256_CERT || "";
+    if (!packageName || !sha256Cert) {
+      res.json([]);
+      return;
+    }
+    res.json([{
+      relation: ["delegate_permission/common.handle_all_urls", "delegate_permission/common.get_login_creds"],
+      target: {
+        namespace: "android_app",
+        package_name: packageName,
+        sha256_cert_fingerprints: [sha256Cert],
+      },
+    }]);
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({

@@ -260,7 +260,7 @@ function VoiceMemoLanding() {
                 Features
               </a>
               <a
-                href="https://github.com/HikaruEgashira/pleno-live/releases"
+                href="https://github.com/plenoai/pleno-live/releases"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -269,7 +269,7 @@ function VoiceMemoLanding() {
                 </Button>
               </a>
               <a
-                href="https://github.com/HikaruEgashira/pleno-live"
+                href="https://github.com/plenoai/pleno-live"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted hover:text-foreground transition-colors"
@@ -326,7 +326,7 @@ function VoiceMemoLanding() {
                 animate={isClient ? "visible" : false}
                 className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
               >
-                <a href="https://github.com/HikaruEgashira/pleno-live/releases">
+                <a href="https://github.com/plenoai/pleno-live/releases">
                   <Button size="lg">Download App</Button>
                 </a>
                 <Link href="/record">
@@ -442,7 +442,7 @@ function VoiceMemoLanding() {
               アプリをダウンロードして、声をナレッジに変換しましょう
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a href="https://github.com/HikaruEgashira/pleno-live/releases">
+              <a href="https://github.com/plenoai/pleno-live/releases">
                 <Button size="lg">Download Now</Button>
               </a>
               <Link href="/record">
@@ -467,7 +467,7 @@ function VoiceMemoLanding() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted">
               <a
-                href="https://github.com/HikaruEgashira/pleno-live"
+                href="https://github.com/plenoai/pleno-live"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-foreground transition-colors"

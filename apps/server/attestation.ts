@@ -1,5 +1,21 @@
 import { SignJWT, jwtVerify } from "jose";
-import { createHash, timingSafeEqual, randomBytes } from "crypto";
+import { randomBytes } from "crypto";
+import {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} from "@simplewebauthn/server";
+import type {
+  RegistrationResponseJSON,
+  AuthenticationResponseJSON,
+} from "@simplewebauthn/types";
+import {
+  storeCredential,
+  getCredentialsByDevice,
+  getCredentialById,
+  updateCredentialCounter,
+} from "./credential-store";
 
 const CHALLENGE_TTL = "5m";
 const ALGORITHM = "HS256";
@@ -12,65 +28,169 @@ function getChallengeSecret(): Uint8Array {
   return new TextEncoder().encode(raw);
 }
 
-function generateNonce(): string {
-  return randomBytes(32).toString("hex");
+function getRpConfig() {
+  const rpID = process.env.WEBAUTHN_RP_ID || "plenoai.com";
+  const originsRaw = process.env.WEBAUTHN_RP_ORIGINS || "https://plenoai.com";
+  const expectedOrigins = originsRaw.split(",").map((o) => o.trim()).filter(Boolean);
+  return { rpID, expectedOrigins };
 }
 
-type ChallengeResult = {
-  nonce: string;
-  challengeToken: string;
+type ChallengeToken = {
+  challenge: string;
+  deviceId: string;
 };
 
-export async function createChallenge(): Promise<ChallengeResult> {
-  const nonce = generateNonce();
-
-  const challengeToken = await new SignJWT({ nonce })
+async function signChallengeToken(payload: ChallengeToken): Promise<string> {
+  return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: ALGORITHM })
     .setIssuedAt()
     .setExpirationTime(CHALLENGE_TTL)
     .sign(getChallengeSecret());
-
-  return { nonce, challengeToken };
 }
 
-export async function verifyClientResponse(
-  challengeToken: string,
-  responseHash: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const challengeResult = await jwtVerify(challengeToken, getChallengeSecret(), {
+async function verifyChallengeToken(token: string): Promise<ChallengeToken | null> {
+  const result = await jwtVerify(token, getChallengeSecret(), {
     algorithms: [ALGORITHM],
   }).catch(() => null);
 
-  if (!challengeResult) {
+  if (!result) return null;
+
+  const { challenge, deviceId } = result.payload as Record<string, unknown>;
+  if (typeof challenge !== "string" || typeof deviceId !== "string") return null;
+
+  return { challenge, deviceId };
+}
+
+export async function beginRegistration(
+  deviceId: string,
+  platform: string,
+): Promise<{ options: ReturnType<typeof generateRegistrationOptions> extends Promise<infer T> ? T : never; challengeToken: string }> {
+  const { rpID } = getRpConfig();
+
+  const options = await generateRegistrationOptions({
+    rpName: "Pleno Live",
+    rpID,
+    userName: deviceId,
+    userDisplayName: `Device ${platform}`,
+    attestationType: "none",
+    authenticatorSelection: {
+      residentKey: "preferred",
+      userVerification: "preferred",
+    },
+  });
+
+  const challengeToken = await signChallengeToken({
+    challenge: options.challenge,
+    deviceId,
+  });
+
+  return { options, challengeToken };
+}
+
+export async function completeRegistration(
+  challengeToken: string,
+  response: RegistrationResponseJSON,
+  platform: string,
+): Promise<{ ok: true; deviceId: string; sessionToken?: string } | { ok: false; error: string }> {
+  const payload = await verifyChallengeToken(challengeToken);
+  if (!payload) {
     return { ok: false, error: "Invalid or expired challenge token" };
   }
 
-  const nonce = challengeResult.payload.nonce;
-  if (typeof nonce !== "string") {
-    return { ok: false, error: "Challenge token missing nonce" };
+  const { rpID, expectedOrigins } = getRpConfig();
+
+  const verification = await verifyRegistrationResponse({
+    response,
+    expectedChallenge: payload.challenge,
+    expectedOrigin: expectedOrigins,
+    expectedRPID: rpID,
+  }).catch((e) => ({ verified: false, error: String(e) }));
+
+  if (!verification.verified || !("registrationInfo" in verification) || !verification.registrationInfo) {
+    return { ok: false, error: "Registration verification failed" };
   }
 
-  const secret = process.env.APP_HMAC_SECRET;
-  if (!secret || secret.length < 32) {
-    return { ok: false, error: "Server misconfigured" };
+  const { credential } = verification.registrationInfo;
+
+  await storeCredential({
+    credentialId: credential.id,
+    publicKey: Buffer.from(credential.publicKey).toString("base64url"),
+    counter: credential.counter,
+    transports: (response.response.transports as string[]) || [],
+    deviceId: payload.deviceId,
+    platform,
+    createdAt: Date.now(),
+  });
+
+  return { ok: true, deviceId: payload.deviceId };
+}
+
+export async function beginAuthentication(
+  deviceId: string,
+): Promise<{ options: ReturnType<typeof generateAuthenticationOptions> extends Promise<infer T> ? T : never; challengeToken: string } | null> {
+  const { rpID } = getRpConfig();
+  const credentials = await getCredentialsByDevice(deviceId);
+
+  if (credentials.length === 0) return null;
+
+  const options = await generateAuthenticationOptions({
+    rpID,
+    allowCredentials: credentials.map((c) => ({
+      id: c.credentialId,
+      transports: c.transports as any,
+    })),
+    userVerification: "preferred",
+  });
+
+  const challengeToken = await signChallengeToken({
+    challenge: options.challenge,
+    deviceId,
+  });
+
+  return { options, challengeToken };
+}
+
+export async function completeAuthentication(
+  challengeToken: string,
+  response: AuthenticationResponseJSON,
+): Promise<{ ok: true; deviceId: string; platform: string } | { ok: false; error: string }> {
+  const payload = await verifyChallengeToken(challengeToken);
+  if (!payload) {
+    return { ok: false, error: "Invalid or expired challenge token" };
   }
 
-  const expected = createHash("sha256")
-    .update(secret + ":" + nonce)
-    .digest("hex");
+  const { rpID, expectedOrigins } = getRpConfig();
+  const stored = await getCredentialById(response.id, payload.deviceId);
 
-  if (expected.length !== responseHash.length) {
-    return { ok: false, error: "Invalid response" };
+  if (!stored) {
+    return { ok: false, error: "Credential not found" };
   }
 
-  const isValid = timingSafeEqual(
-    Buffer.from(expected),
-    Buffer.from(responseHash),
+  const verification = await verifyAuthenticationResponse({
+    response,
+    expectedChallenge: payload.challenge,
+    expectedOrigin: expectedOrigins,
+    expectedRPID: rpID,
+    credential: {
+      id: stored.credentialId,
+      publicKey: Buffer.from(stored.publicKey, "base64url"),
+      counter: stored.counter,
+      transports: stored.transports as any,
+    },
+  }).catch((e) => ({ verified: false, error: String(e) }));
+
+  if (!verification.verified || !("authenticationInfo" in verification) || !verification.authenticationInfo) {
+    return { ok: false, error: "Authentication verification failed" };
+  }
+
+  await updateCredentialCounter(
+    stored.credentialId,
+    stored.deviceId,
+    verification.authenticationInfo.newCounter,
   );
 
-  if (!isValid) {
-    return { ok: false, error: "Invalid response" };
-  }
-
-  return { ok: true };
+  return { ok: true, deviceId: stored.deviceId, platform: stored.platform };
 }
+
+// Legacy HMAC exports - kept for migration period fallback
+export { createChallenge, verifyClientResponse } from "./attestation-hmac";

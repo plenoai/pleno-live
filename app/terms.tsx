@@ -99,7 +99,7 @@ export default function TermsPage() {
             <Pressable
               onPress={() =>
                 Linking.openURL(
-                  "https://github.com/HikaruEgashira/pleno-transcribe/issues"
+                  "https://github.com/plenoai/pleno-live/issues"
                 )
               }
             >

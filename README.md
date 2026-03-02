@@ -4,4 +4,4 @@
 
 ## Download
 
-**[Download APK (Android)](https://github.com/HikaruEgashira/pleno-live/releases/latest/download/pleno-live-latest.apk)**
+**[Download APK (Android)](https://github.com/plenoai/pleno-live/releases/latest/download/pleno-live-latest.apk)**

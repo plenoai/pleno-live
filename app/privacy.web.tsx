@@ -59,7 +59,7 @@ export default function PrivacyPage() {
             </a>
             <div className="flex items-center gap-4">
               <a
-                href="https://github.com/HikaruEgashira/pleno-transcribe"
+                href="https://github.com/plenoai/pleno-live"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-lg hover:bg-surface transition-colors"
@@ -240,7 +240,7 @@ export default function PrivacyPage() {
               <span>
                 GitHubの
                 <a
-                  href="https://github.com/HikaruEgashira/pleno-transcribe/issues"
+                  href="https://github.com/plenoai/pleno-live/issues"
                   className="text-primary hover:underline ml-1"
                   target="_blank"
                   rel="noopener noreferrer"
