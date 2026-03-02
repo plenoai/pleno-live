@@ -111,7 +111,7 @@ resource "aws_codebuild_project" "runner" {
 
   source {
     type            = "GITHUB"
-    location        = "https://github.com/HikaruEgashira/pleno-live"
+    location        = "https://github.com/plenoai/pleno-live"
     git_clone_depth = 1
 
     # Runner projectはbuildspecをGitHub Actionsが制御するため空
