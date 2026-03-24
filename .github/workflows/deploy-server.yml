@@ -29,7 +29,7 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: arn:aws:iam::951872725222:role/pleno-live-github-actions-deploy
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
