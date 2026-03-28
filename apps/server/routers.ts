@@ -2,14 +2,7 @@ import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { signSessionToken } from "./_core/auth";
-import {
-  createChallenge,
-  verifyClientResponse,
-  beginRegistration,
-  completeRegistration,
-  beginAuthentication,
-  completeAuthentication,
-} from "./attestation";
+import { createChallenge, verifyClientResponse } from "./attestation";
 import { invokeLLM, type Message } from "./_core/llm";
 import {
   transcribeAudio,
@@ -22,9 +15,7 @@ import { generateRealtimeToken } from "./elevenlabs-realtime";
 
 const authRouter = router({
   createChallenge: publicProcedure.mutation(async () => {
-    console.log("[Auth] createChallenge called");
     const { nonce, challengeToken } = await createChallenge();
-    console.log("[Auth] createChallenge success");
     return { nonce, challengeToken };
   }),
 
@@ -36,10 +27,8 @@ const authRouter = router({
       deviceId: z.string(),
     }))
     .mutation(async ({ input }) => {
-      console.log("[Auth] verifyAttestation called", { platform: input.platform, deviceId: input.deviceId });
       const result = await verifyClientResponse(input.challengeToken, input.responseHash);
       if (!result.ok) {
-        console.error("[Auth] verifyAttestation failed", { error: result.error, platform: input.platform });
         return { success: false as const, error: result.error, sessionToken: null, expiresAt: 0 };
       }
 
@@ -50,76 +39,6 @@ const authRouter = router({
 
       const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
 
-      console.log("[Auth] verifyAttestation success", { platform: input.platform });
-      return { success: true as const, sessionToken, expiresAt };
-    }),
-
-  // WebAuthn/Passkey endpoints
-  beginRegistration: publicProcedure
-    .input(z.object({
-      deviceId: z.string(),
-      platform: z.string(),
-    }))
-    .mutation(async ({ input }) => {
-      console.log("[Auth] beginRegistration called", { platform: input.platform });
-      const result = await beginRegistration(input.deviceId, input.platform);
-      return result;
-    }),
-
-  completeRegistration: publicProcedure
-    .input(z.object({
-      challengeToken: z.string(),
-      response: z.any(),
-      platform: z.string(),
-    }))
-    .mutation(async ({ input }) => {
-      console.log("[Auth] completeRegistration called", { platform: input.platform });
-      const result = await completeRegistration(input.challengeToken, input.response, input.platform);
-      if (!result.ok) {
-        console.error("[Auth] completeRegistration failed", { error: result.error });
-        return { success: false as const, error: result.error, sessionToken: null, expiresAt: 0 };
-      }
-
-      const sessionToken = await signSessionToken({
-        deviceId: result.deviceId,
-        platform: input.platform,
-      });
-      const expiresAt = Date.now() + 60 * 60 * 1000;
-
-      console.log("[Auth] completeRegistration success", { platform: input.platform });
-      return { success: true as const, sessionToken, expiresAt };
-    }),
-
-  beginAuthentication: publicProcedure
-    .input(z.object({
-      deviceId: z.string(),
-    }))
-    .mutation(async ({ input }) => {
-      console.log("[Auth] beginAuthentication called", { deviceId: input.deviceId });
-      const result = await beginAuthentication(input.deviceId);
-      return result; // null if no credentials registered
-    }),
-
-  completeAuthentication: publicProcedure
-    .input(z.object({
-      challengeToken: z.string(),
-      response: z.any(),
-    }))
-    .mutation(async ({ input }) => {
-      console.log("[Auth] completeAuthentication called");
-      const result = await completeAuthentication(input.challengeToken, input.response);
-      if (!result.ok) {
-        console.error("[Auth] completeAuthentication failed", { error: result.error });
-        return { success: false as const, error: result.error, sessionToken: null, expiresAt: 0 };
-      }
-
-      const sessionToken = await signSessionToken({
-        deviceId: result.deviceId,
-        platform: result.platform,
-      });
-      const expiresAt = Date.now() + 60 * 60 * 1000;
-
-      console.log("[Auth] completeAuthentication success", { platform: result.platform });
       return { success: true as const, sessionToken, expiresAt };
     }),
 });
