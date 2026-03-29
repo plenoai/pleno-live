@@ -21,7 +21,6 @@ import { initManusRuntime, subscribeSafeAreaInsets } from "@/packages/lib/_core/
 import { RecordingsProvider } from "@/packages/lib/recordings-context";
 import { LanguageProvider } from "@/packages/lib/i18n/context";
 import { SettingsProvider } from "@/packages/lib/settings-context";
-import { MoonshineProvider } from "@/packages/lib/moonshine-context";
 import { initializeAuth, setTRPCClient } from "@/packages/lib/auth";
 
 const STORYBOOK_ENABLED = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
@@ -54,11 +53,9 @@ function AppProviders({ children }: { children: React.ReactNode }) {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <SettingsProvider>
-          <MoonshineProvider>
-            <LanguageProvider>
-              <RecordingsProvider>{children}</RecordingsProvider>
-            </LanguageProvider>
-          </MoonshineProvider>
+          <LanguageProvider>
+            <RecordingsProvider>{children}</RecordingsProvider>
+          </LanguageProvider>
         </SettingsProvider>
       </QueryClientProvider>
     </trpc.Provider>

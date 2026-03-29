@@ -1,21 +1,11 @@
-import React, { createContext, useContext } from "react";
 import { useMoonshineModel, type UseMoonshineModelReturn } from "@/packages/hooks/use-moonshine-model";
 
-const MoonshineContext = createContext<UseMoonshineModelReturn | null>(null);
-
-export function MoonshineProvider({ children }: { children: React.ReactNode }) {
-  const value = useMoonshineModel();
-  return (
-    <MoonshineContext.Provider value={value}>
-      {children}
-    </MoonshineContext.Provider>
-  );
-}
-
+/**
+ * Moonshine hook - 直接 useMoonshineModel を呼ぶ
+ * 以前はグローバルProviderでラップしていたが、react-native-executorch の
+ * ネイティブモジュール初期化がアプリ起動をクラッシュさせるため、
+ * 必要な画面でのみ遅延ロードする設計に変更
+ */
 export function useMoonshine(): UseMoonshineModelReturn {
-  const ctx = useContext(MoonshineContext);
-  if (!ctx) {
-    throw new Error("useMoonshine must be used within MoonshineProvider");
-  }
-  return ctx;
+  return useMoonshineModel();
 }
