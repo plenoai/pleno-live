@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { signSessionToken } from "./_core/auth";
-import { createChallenge, verifyClientResponse } from "./attestation";
+import { protectedProcedure, router } from "./_core/trpc";
 import { invokeLLM, type Message } from "./_core/llm";
 import {
   transcribeAudio,
@@ -13,39 +11,8 @@ import {
 import { transcribeAudioWithGemini } from "./gemini";
 import { generateRealtimeToken } from "./elevenlabs-realtime";
 
-const authRouter = router({
-  createChallenge: publicProcedure.mutation(async () => {
-    const { nonce, challengeToken } = await createChallenge();
-    return { nonce, challengeToken };
-  }),
-
-  verifyAttestation: publicProcedure
-    .input(z.object({
-      responseHash: z.string(),
-      challengeToken: z.string(),
-      platform: z.string(),
-      deviceId: z.string(),
-    }))
-    .mutation(async ({ input }) => {
-      const result = await verifyClientResponse(input.challengeToken, input.responseHash);
-      if (!result.ok) {
-        return { success: false as const, error: result.error, sessionToken: null, expiresAt: 0 };
-      }
-
-      const sessionToken = await signSessionToken({
-        deviceId: input.deviceId,
-        platform: input.platform,
-      });
-
-      const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
-
-      return { success: true as const, sessionToken, expiresAt };
-    }),
-});
-
 export const appRouter = router({
   system: systemRouter,
-  auth: authRouter,
 
   ai: router({
     // Transcription endpoint supporting both ElevenLabs and Gemini
