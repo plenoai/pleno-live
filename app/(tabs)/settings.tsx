@@ -341,7 +341,7 @@ export default function SettingsScreen() {
           />
           <ToggleRow
             label="自動分析"
-            description="文字起こし後に要約・タグ・感情分析を自動実行（Gemini使用）"
+            description="文字起こし後に要約・タグ・感情分析を自動実行"
             value={settings.autoAnalyze}
             onValueChange={() => { Haptics.impact("light"); updateSettings({ autoAnalyze: !settings.autoAnalyze }); }}
             colors={colors}
@@ -349,13 +349,13 @@ export default function SettingsScreen() {
           />
         </View>
 
-        {/* リアルタイム（ElevenLabs限定） */}
-        <SectionHeader label="リアルタイム" badge="ElevenLabs 限定" colors={colors} />
+        {/* リアルタイム */}
+        <SectionHeader label="リアルタイム" colors={colors} />
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           {!isElevenLabs && (
             <NoteBox
               icon="exclamationmark.triangle.fill"
-              text="リアルタイム機能は ElevenLabs プロバイダのみ利用できます"
+              text="リアルタイム機能は現在の文字起こし設定では利用できません"
               color={colors.warning}
               colors={colors}
               style={{ marginBottom: 12 }}
@@ -406,7 +406,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* 要約 */}
-        <SectionHeader label="要約" badge="Gemini 使用" colors={colors} />
+        <SectionHeader label="要約" colors={colors} />
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <RowLabel label="テンプレート" colors={colors} />
           {TEMPLATES.map((template) => (

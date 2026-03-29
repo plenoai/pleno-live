@@ -1026,9 +1026,6 @@ export default function NoteDetailScreen() {
                   <Text style={[styles.emptyText, { color: colors.muted }]}>
                     文字起こしがまだありません
                   </Text>
-                  <Text style={[styles.providerHint, { color: colors.muted }]}>
-                    プロバイダ: {settings.transcriptionProvider === "gemini" ? "Gemini" : "ElevenLabs"}
-                  </Text>
                   <TouchableOpacity
                     onPress={handleTranscribe}
                     disabled={isProcessing}
@@ -2036,10 +2033,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-  },
-  providerHint: {
-    fontSize: 13,
-    marginTop: 4,
   },
   tagsSectionHeader: {
     flexDirection: "row",
