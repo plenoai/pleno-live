@@ -38,16 +38,14 @@ function AppProviders({ children }: { children: React.ReactNode }) {
       }),
   );
   const [trpcClient] = useState(() => createTRPCClient());
-  const [authReady, setAuthReady] = useState(false);
-
   useEffect(() => {
     const vanillaClient = createVanillaTRPCClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setTRPCClient(vanillaClient as any);
-    initializeAuth().finally(() => setAuthReady(true));
+    initializeAuth().catch((e) =>
+      console.error("[Auth] initializeAuth failed", String(e))
+    );
   }, []);
-
-  if (!authReady) return null;
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
