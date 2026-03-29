@@ -1,24 +1,25 @@
-name: Release
+name: Preview IPA
 
 on:
+  workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths-ignore:
+      - 'app/website/**'
+      - '.github/workflows/deploy-website.yml'
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: preview-ios-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-android:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -29,11 +30,6 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -45,82 +41,7 @@ jobs:
         env:
           APP_HMAC_SECRET: ${{ secrets.APP_HMAC_SECRET }}
         run: |
-          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("\\n"; "") | gsub("\\r"; ""))"' eas.json | envsubst >> $GITHUB_ENV
-
-      - name: Expo prebuild
-        run: npx expo prebuild --platform android --clean
-
-      - name: Configure Android build
-        run: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-          # arm64-v8aのみ・R8 minify有効・gif/webp無効でサイズ最小化
-          # configuration-cache はReact Nativeのnodeプロセス呼び出しと非互換のため無効
-          cat >> android/gradle.properties << 'EOF'
-          reactNativeArchitectures=arm64-v8a
-          android.enableMinifyInReleaseBuilds=true
-          expo.gif.enabled=false
-          expo.webp.enabled=false
-          EOF
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-home-cache-cleanup: true
-
-      - name: Build release APK
-        env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g"
-        run: |
-          cd android
-          ./gradlew assembleRelease \
-            --build-cache \
-            --parallel \
-            -x lint \
-            -x lintRelease
-
-      - name: Get version
-        id: version
-        run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "apk=pleno-live-$VERSION.apk" >> $GITHUB_OUTPUT
-
-      - name: Rename APK
-        run: |
-          cp android/app/build/outputs/apk/release/app-release.apk \
-             ${{ steps.version.outputs.apk }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: ${{ steps.version.outputs.apk }}
-
-  build-ios:
-    runs-on: macos-15
-    timeout-minutes: 45
-    outputs:
-      ipa: ${{ steps.version.outputs.ipa }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Load env from eas.json
-        env:
-          APP_HMAC_SECRET: ${{ secrets.APP_HMAC_SECRET }}
-        run: |
-          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("\\n"; "") | gsub("\\r"; ""))"' eas.json | envsubst >> $GITHUB_ENV
+          jq -r '.build.preview.env | to_entries[] | "\(.key)=\(.value | gsub("\n"; "") | gsub("\r"; ""))"' eas.json | envsubst >> $GITHUB_ENV
 
       - name: Expo prebuild
         run: npx expo prebuild --platform ios --clean
@@ -140,19 +61,23 @@ jobs:
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
 
+          # Import certificate
           CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
           echo -n "$IOS_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
 
+          # Create temporary keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
+          # Import certificate to keychain
           security import $CERTIFICATE_PATH -P "$IOS_CERTIFICATE_PASSWORD" \
             -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: \
             -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
+          # Install provisioning profile
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo -n "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
@@ -178,6 +103,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             | xcbeautify --quiet
 
+          # Export IPA
           cat > $RUNNER_TEMP/ExportOptions.plist << 'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -205,36 +131,54 @@ jobs:
           rm -f $RUNNER_TEMP/certificate.p12
           rm -f $RUNNER_TEMP/profile.mobileprovision
 
-      - name: Get version
-        id: version
+      - name: Get metadata
+        id: meta
         run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          echo "ipa=pleno-live-$VERSION.ipa" >> $GITHUB_OUTPUT
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "tag=preview-ios-$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "ipa=pleno-live-$SHORT_SHA.ipa" >> $GITHUB_OUTPUT
 
       - name: Rename IPA
         run: |
-          cp $RUNNER_TEMP/export/*.ipa ${{ steps.version.outputs.ipa }}
+          cp $RUNNER_TEMP/export/*.ipa ${{ steps.meta.outputs.ipa }}
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-ipa
-          path: ${{ steps.version.outputs.ipa }}
+      - name: Delete existing preview release (if any)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete ${{ steps.meta.outputs.tag }} --yes --cleanup-tag 2>/dev/null || true
 
-  release:
-    needs: [build-android, build-ios]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-
-      - name: Create Release
+      - name: Create preview release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ needs.build-android.outputs.tag }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Preview iOS ${{ steps.meta.outputs.sha }}
+          prerelease: true
+          make_latest: false
           generate_release_notes: true
-          make_latest: true
-          files: |
-            android-apk/*.apk
-            ios-ipa/*.ipa
+          body: |
+            **Preview iOS build** — `${{ steps.meta.outputs.sha }}`
+
+            ${{ github.event.head_commit.message }}
+
+            ### Download
+            **[pleno-live-${{ steps.meta.outputs.sha }}.ipa](https://github.com/${{ github.repository }}/releases/download/${{ steps.meta.outputs.tag }}/pleno-live-${{ steps.meta.outputs.sha }}.ipa)**
+
+            > iOS 16.0以上 / Ad-hoc配布
+          files: ${{ steps.meta.outputs.ipa }}
+
+      - name: Print download URL
+        run: |
+          echo "✅ Download URL:"
+          echo "https://github.com/${{ github.repository }}/releases/download/${{ steps.meta.outputs.tag }}/${{ steps.meta.outputs.ipa }}"
+
+      - name: Cleanup old preview releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release list --limit 1000 --json tagName,createdAt \
+            --jq '[.[] | select(.tagName | test("^preview-ios-"))] | sort_by(.createdAt) | reverse | .[5:] | .[].tagName' \
+            | while read -r tag; do
+              [ -n "$tag" ] && gh release delete "$tag" --yes --cleanup-tag && echo "Deleted: $tag"
+            done
