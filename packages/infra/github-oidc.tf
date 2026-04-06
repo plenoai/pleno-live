@@ -29,6 +29,27 @@ resource "aws_iam_role" "github_actions" {
   })
 }
 
+resource "aws_iam_role" "github_actions_deploy" {
+  name = "pleno-live-github-actions-deploy"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = data.aws_iam_openid_connect_provider.github.arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:plenoai/pleno-live:ref:refs/heads/main"
+        }
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+}
+
 resource "aws_iam_role_policy" "github_actions_ecr" {
   name = "ecr-push"
   role = aws_iam_role.github_actions.id
@@ -63,9 +84,42 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
   })
 }
 
+resource "aws_iam_role_policy" "github_actions_deploy_ecr" {
+  name = "ecr-push"
+  role = aws_iam_role.github_actions_deploy.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "EcrAuth"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Sid    = "EcrPush"
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:PutImage"
+        ]
+        Resource = [
+          aws_ecr_repository.api.arn,
+        ]
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy" "github_actions_lambda" {
   name = "lambda-deploy"
-  role = aws_iam_role.github_actions.id
+  role = aws_iam_role.github_actions_deploy.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -86,4 +140,8 @@ resource "aws_iam_role_policy" "github_actions_lambda" {
 
 output "github_actions_role_arn" {
   value = aws_iam_role.github_actions.arn
+}
+
+output "github_actions_deploy_role_arn" {
+  value = aws_iam_role.github_actions_deploy.arn
 }
