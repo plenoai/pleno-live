@@ -90,11 +90,9 @@ export default function TabLayout() {
             }}
           />
         </Tabs>
-        {!isWeb && (
-          <View style={[styles.recordingBarContainer, { bottom: tabBarHeight }]}>
-            <GlobalRecordingBar />
-          </View>
-        )}
+        <View style={[styles.recordingBarContainer, { bottom: tabBarHeight }]}>
+          <GlobalRecordingBar />
+        </View>
       </View>
   );
 
