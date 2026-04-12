@@ -51,8 +51,8 @@ importers:
         specifier: 11.8.1
         version: 11.8.1(typescript@5.9.3)
       axios:
-        specifier: ^1.14.0
-        version: 1.14.0
+        specifier: ^1.15.0
+        version: 1.15.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2357,8 +2357,8 @@ packages:
     resolution: {integrity: sha512-NZKeq9AfyQvEeNlN0zSYAaWrmBffJh3IELMZfRpJVWgrpEbtEpnjvzqBPf+mxoI287JohRDoa+/nsfqqiZmF6g==}
     engines: {node: '>= 6.0.0'}
 
-  axios@1.14.0:
-    resolution: {integrity: sha512-3Y8yrqLSwjuzpXuZ0oIYZ/XGgLwUIBU3uLvbcpb0pidD9ctpShJd43KSlEEkVQg6DS0G9NKyzOvBfUtDKEyHvQ==}
+  axios@1.15.0:
+    resolution: {integrity: sha512-wWyJDlAatxk30ZJer+GeCWS209sA42X+N5jU2jy6oHTp7ufw8uzUTVFBX9+wTfAlhiJXGS0Bq7X6efruWjuK9Q==}
 
   babel-jest@29.7.0:
     resolution: {integrity: sha512-BrvGY3xZSwEcCzKvKsCi2GgHqDqsYkOP4/by5xCgIwGXQxIEh+8ew3gmrE1y7XRR6LHZIj6yLYnUi/mm2KXKBg==}
@@ -2468,11 +2468,11 @@ packages:
     resolution: {integrity: sha512-apC2+fspHGI3mMKj+dGevkGo/tCqVB8jMb6i+OX+E29p0Iposz07fABkRIfVUPNd5A5VbuOz1bZbnmkKLYF+wQ==}
     engines: {node: '>= 5.10.0'}
 
-  brace-expansion@1.1.13:
-    resolution: {integrity: sha512-9ZLprWS6EENmhEOpjCYW2c8VkmOvckIJZfkr7rBW6dObmfgJ/L1GpSYW5Hpo9lDz4D1+n0Ckz8rU7FwHDQiG/w==}
+  brace-expansion@1.1.14:
+    resolution: {integrity: sha512-MWPGfDxnyzKU7rNOW9SP/c50vi3xrmrua/+6hfPbCS2ABNWfx24vPidzvC7krjU/RTo235sV776ymlsMtGKj8g==}
 
-  brace-expansion@2.0.3:
-    resolution: {integrity: sha512-MCV/fYJEbqx68aE58kv2cA/kiky1G8vux3OR6/jbS+jIMe/6fJWa0DTzJU7dqijOWYwHi1t29FlfYI9uytqlpA==}
+  brace-expansion@2.1.0:
+    resolution: {integrity: sha512-TN1kCZAgdgweJhWWpgKYrQaMNHcDULHkWwQIspdtjV4Y5aurRdZpjAqn6yX3FPqTA9ngHCc4hJxMAMgGfve85w==}
 
   brace-expansion@5.0.5:
     resolution: {integrity: sha512-VZznLgtwhn+Mact9tfiwx64fA9erHH/MCXEUfB/0bX/6Fz6ny5EGTXYltMocqg4xFAQZtnO3DHWWXi8RiuN7cQ==}
@@ -8491,7 +8491,7 @@ snapshots:
 
   aws-ssl-profiles@1.1.2: {}
 
-  axios@1.14.0:
+  axios@1.15.0:
     dependencies:
       follow-redirects: 1.15.11
       form-data: 4.0.5
@@ -8673,12 +8673,12 @@ snapshots:
     dependencies:
       big-integer: 1.6.52
 
-  brace-expansion@1.1.13:
+  brace-expansion@1.1.14:
     dependencies:
       balanced-match: 1.0.2
       concat-map: 0.0.1
 
-  brace-expansion@2.0.3:
+  brace-expansion@2.1.0:
     dependencies:
       balanced-match: 1.0.2
 
@@ -10829,11 +10829,11 @@ snapshots:
 
   minimatch@3.1.5:
     dependencies:
-      brace-expansion: 1.1.13
+      brace-expansion: 1.1.14
 
   minimatch@9.0.9:
     dependencies:
-      brace-expansion: 2.0.3
+      brace-expansion: 2.1.0
 
   minimist@1.2.8: {}
 
