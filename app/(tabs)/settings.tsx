@@ -13,8 +13,17 @@ import {
 import Constants from "expo-constants";
 
 import { ScreenContainer } from "@/packages/components/screen-container";
+import { PageHeader } from "@/packages/components/page-header";
 import { Haptics, Storage } from "@/packages/platform";
 import { IconSymbol, type IconSymbolName } from "@/packages/components/ui/icon-symbol";
+import { withAlpha } from "@/packages/lib/color";
+import {
+  BorderRadius,
+  FontSize,
+  FontWeight,
+  ScreenPadding,
+  Spacing,
+} from "@/packages/constants/layout";
 import { useRecordings } from "@/packages/lib/recordings-context";
 import { useColors } from "@/packages/hooks/use-colors";
 import { useThemeContext } from "@/packages/lib/theme-provider";
@@ -212,9 +221,7 @@ export default function SettingsScreen() {
   return (
     <ScreenContainer>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.foreground }]}>設定</Text>
-        </View>
+        <PageHeader title="設定" />
 
         {/* 録音 */}
         <SectionHeader label="録音" />
@@ -439,7 +446,7 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             onPress={() => setShowTemplateForm(!showTemplateForm)}
-            style={[styles.addButton, { backgroundColor: colors.primary + "15" }]}
+            style={[styles.addButton, { backgroundColor: withAlpha(colors.primary, 0.08) }]}
           >
             <IconSymbol name="plus" size={16} color={colors.primary} />
             <Text style={[styles.addButtonText, { color: colors.primary }]}>カスタムテンプレートを追加</Text>
@@ -469,7 +476,7 @@ export default function SettingsScreen() {
                 <TouchableOpacity onPress={handleCreateTemplate} style={[styles.formButton, { backgroundColor: colors.primary }]}>
                   <Text style={styles.formButtonText}>作成</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setShowTemplateForm(false); setNewTemplateName(""); setNewTemplatePrompt(""); }} style={[styles.formButton, { backgroundColor: colors.muted + "20" }]}>
+                <TouchableOpacity onPress={() => { setShowTemplateForm(false); setNewTemplateName(""); setNewTemplatePrompt(""); }} style={[styles.formButton, { backgroundColor: withAlpha(colors.muted, 0.12) }]}>
                   <Text style={[styles.formButtonText, { color: colors.foreground }]}>キャンセル</Text>
                 </TouchableOpacity>
               </View>
@@ -532,11 +539,12 @@ export default function SettingsScreen() {
 type Colors = ReturnType<typeof useColors>;
 
 function SectionHeader({ label, badge, colors }: { label: string; badge?: string; colors?: Colors }) {
+  const themeColors = useColors();
   return (
     <View style={sectionHeaderStyles.row}>
-      <Text style={sectionHeaderStyles.label}>{label}</Text>
+      <Text style={[sectionHeaderStyles.label, { color: themeColors.muted }]}>{label}</Text>
       {badge && colors && (
-        <View style={[sectionHeaderStyles.badge, { backgroundColor: colors.primary + "20" }]}>
+        <View style={[sectionHeaderStyles.badge, { backgroundColor: withAlpha(colors.primary, 0.12) }]}>
           <Text style={[sectionHeaderStyles.badgeText, { color: colors.primary }]}>{badge}</Text>
         </View>
       )}
@@ -545,10 +553,22 @@ function SectionHeader({ label, badge, colors }: { label: string; badge?: string
 }
 
 const sectionHeaderStyles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginTop: 20, marginBottom: 6, gap: 8 },
-  label: { fontSize: 12, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.8, color: "#888" },
-  badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-  badgeText: { fontSize: 10, fontWeight: "600" },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: ScreenPadding.horizontal,
+    marginTop: Spacing.xl,
+    marginBottom: 6,
+    gap: Spacing.sm,
+  },
+  label: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.lg },
+  badgeText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
 });
 
 function RowLabel({ label, colors }: { label: string; colors: Colors }) {
@@ -556,7 +576,7 @@ function RowLabel({ label, colors }: { label: string; colors: Colors }) {
 }
 
 const rowLabelStyles = StyleSheet.create({
-  label: { fontSize: 12, fontWeight: "500", marginBottom: 6 },
+  label: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, marginBottom: 6 },
 });
 
 function Chip({ label, selected, onPress, colors }: { label: string; selected: boolean; onPress: () => void; colors: Colors }) {
@@ -571,15 +591,15 @@ function Chip({ label, selected, onPress, colors }: { label: string; selected: b
 }
 
 const chipStyles = StyleSheet.create({
-  chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1 },
-  text: { fontSize: 13, fontWeight: "500" },
+  chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: BorderRadius["3xl"], borderWidth: 1 },
+  text: { fontSize: FontSize.base, fontWeight: FontWeight.medium },
 });
 
 function SelectItem({ label, description, selected, onPress, colors }: { label: string; description?: string; selected: boolean; onPress: () => void; colors: Colors }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[selectItemStyles.item, { backgroundColor: selected ? colors.primary + "12" : "transparent", borderColor: selected ? colors.primary : colors.border }]}
+      style={[selectItemStyles.item, { backgroundColor: selected ? withAlpha(colors.primary, 0.07) : "transparent", borderColor: selected ? colors.primary : colors.border }]}
     >
       <View style={{ flex: 1 }}>
         <Text style={[selectItemStyles.label, { color: selected ? colors.primary : colors.foreground }]}>{label}</Text>
@@ -591,9 +611,9 @@ function SelectItem({ label, description, selected, onPress, colors }: { label: 
 }
 
 const selectItemStyles = StyleSheet.create({
-  item: { flexDirection: "row", alignItems: "center", padding: 11, borderRadius: 8, borderWidth: 1, marginBottom: 6 },
-  label: { fontSize: 14, fontWeight: "500" },
-  description: { fontSize: 12, marginTop: 1 },
+  item: { flexDirection: "row", alignItems: "center", padding: 11, borderRadius: BorderRadius.lg, borderWidth: 1, marginBottom: 6 },
+  label: { fontSize: FontSize.md, fontWeight: FontWeight.medium },
+  description: { fontSize: FontSize.sm, marginTop: 1 },
 });
 
 function ToggleRow({ label, description, value, onValueChange, colors, disabled, noBorder }: {
@@ -622,14 +642,14 @@ function ToggleRow({ label, description, value, onValueChange, colors, disabled,
 }
 
 const toggleRowStyles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", paddingVertical: 12 },
-  label: { fontSize: 15, fontWeight: "500" },
-  description: { fontSize: 12, marginTop: 2 },
+  row: { flexDirection: "row", alignItems: "center", paddingVertical: Spacing.md },
+  label: { fontSize: FontSize.md, fontWeight: FontWeight.medium },
+  description: { fontSize: FontSize.sm, marginTop: 2 },
 });
 
-function NoteBox({ icon, text, color, colors, style }: { icon: string; text: string; color: string; colors: Colors; style?: object }) {
+function NoteBox({ icon, text, color, colors: _colors, style }: { icon: string; text: string; color: string; colors: Colors; style?: object }) {
   return (
-    <View style={[noteBoxStyles.box, { backgroundColor: color + "18" }, style]}>
+    <View style={[noteBoxStyles.box, { backgroundColor: withAlpha(color, 0.1) }, style]}>
       <IconSymbol name={icon as IconSymbolName} size={14} color={color} />
       <Text style={[noteBoxStyles.text, { color }]}>{text}</Text>
     </View>
@@ -637,40 +657,38 @@ function NoteBox({ icon, text, color, colors, style }: { icon: string; text: str
 }
 
 const noteBoxStyles = StyleSheet.create({
-  box: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: 8, gap: 8 },
-  text: { flex: 1, fontSize: 12, lineHeight: 17 },
+  box: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: BorderRadius.lg, gap: Spacing.sm },
+  text: { flex: 1, fontSize: FontSize.sm, lineHeight: 17 },
 });
 
 // ---- メインスタイル ----
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  title: { fontSize: 32, fontWeight: "700" },
-  section: { marginHorizontal: 16, borderRadius: 10, padding: 14 },
-  divider: { borderTopWidth: 1, marginVertical: 8 },
+  section: { marginHorizontal: ScreenPadding.horizontal, borderRadius: BorderRadius.xl, padding: 14 },
+  divider: { borderTopWidth: 1, marginVertical: Spacing.sm },
   subsection: { borderTopWidth: 1, marginTop: 10, paddingTop: 10 },
-  subsectionTitle: { fontSize: 13, fontWeight: "600", marginBottom: 8 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  actionButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 11, borderRadius: 8, borderWidth: 1, gap: 7 },
-  actionButtonText: { fontSize: 14, fontWeight: "500" },
+  subsectionTitle: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, marginBottom: Spacing.sm },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
+  actionButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 11, borderRadius: BorderRadius.lg, borderWidth: 1, gap: 7 },
+  actionButtonText: { fontSize: FontSize.md, fontWeight: FontWeight.medium },
   infoRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 },
-  infoLabel: { fontSize: 13 },
-  infoValue: { fontSize: 13, fontWeight: "500" },
-  customTemplateItem: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: 8, borderWidth: 1, marginBottom: 6, gap: 8 },
-  customTemplateName: { fontSize: 13, fontWeight: "600", marginBottom: 2 },
-  customTemplatePrompt: { fontSize: 12, lineHeight: 16 },
+  infoLabel: { fontSize: FontSize.base },
+  infoValue: { fontSize: FontSize.base, fontWeight: FontWeight.medium },
+  customTemplateItem: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: BorderRadius.lg, borderWidth: 1, marginBottom: 6, gap: Spacing.sm },
+  customTemplateName: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, marginBottom: 2 },
+  customTemplatePrompt: { fontSize: FontSize.sm, lineHeight: 16 },
   deleteButton: { padding: 4 },
-  addButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 8, gap: 6, marginTop: 10 },
-  addButtonText: { fontSize: 13, fontWeight: "600" },
-  templateForm: { borderWidth: 1, borderRadius: 8, padding: 14, marginTop: 10 },
-  formLabel: { fontSize: 13, fontWeight: "600", marginBottom: 6 },
-  textInput: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14 },
-  textInputMultiline: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, textAlignVertical: "top", minHeight: 80 },
-  formButtons: { flexDirection: "row", gap: 8, marginTop: 12 },
-  formButton: { flex: 1, paddingVertical: 9, borderRadius: 6, alignItems: "center" },
-  formButtonText: { fontSize: 13, fontWeight: "600", color: "#FFFFFF" },
+  addButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: BorderRadius.lg, gap: 6, marginTop: 10 },
+  addButtonText: { fontSize: FontSize.base, fontWeight: FontWeight.semibold },
+  templateForm: { borderWidth: 1, borderRadius: BorderRadius.lg, padding: 14, marginTop: 10 },
+  formLabel: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, marginBottom: 6 },
+  textInput: { borderWidth: 1, borderRadius: BorderRadius.md, paddingHorizontal: 10, paddingVertical: Spacing.sm, fontSize: FontSize.md },
+  textInputMultiline: { borderWidth: 1, borderRadius: BorderRadius.md, paddingHorizontal: 10, paddingVertical: Spacing.sm, fontSize: FontSize.md, textAlignVertical: "top", minHeight: 80 },
+  formButtons: { flexDirection: "row", gap: Spacing.sm, marginTop: Spacing.md },
+  formButton: { flex: 1, paddingVertical: 9, borderRadius: BorderRadius.md, alignItems: "center" },
+  formButtonText: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, color: "#FFFFFF" },
   footer: { alignItems: "center", paddingVertical: 28, gap: 4 },
-  footerAppName: { fontSize: 13, fontWeight: "500" },
-  footerSub: { fontSize: 12 },
+  footerAppName: { fontSize: FontSize.base, fontWeight: FontWeight.medium },
+  footerSub: { fontSize: FontSize.sm },
 });

@@ -12,6 +12,7 @@ import { useKeepAwake } from "expo-keep-awake";
 import { SystemAudioStream, AudioSource } from "@/packages/lib/system-audio-stream";
 
 import { ScreenContainer } from "@/packages/components/screen-container";
+import { PageHeader } from "@/packages/components/page-header";
 import { IconSymbol, type IconSymbolName } from "@/packages/components/ui/icon-symbol";
 import { Badge } from "@/packages/components/ui/badge";
 import { useColors } from "@/packages/hooks/use-colors";
@@ -19,6 +20,14 @@ import { useResponsive } from "@/packages/hooks/use-responsive";
 import { useRecordingSession } from "@/packages/lib/recording-session-context";
 import { useTranslation } from "@/packages/lib/i18n/context";
 import { useTranscriptRefinement } from "@/packages/hooks/use-transcript-refinement";
+import { withAlpha } from "@/packages/lib/color";
+import {
+  BorderRadius,
+  FontSize,
+  FontWeight,
+  ScreenPadding,
+  Spacing,
+} from "@/packages/constants/layout";
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -84,24 +93,25 @@ export default function RecordScreen() {
   return (
     <ScreenContainer>
       <View style={[styles.container, isDesktop && styles.containerDesktop]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            {isRecording ? t("record.title_recording") : t("record.title_new")}
-          </Text>
-          {isRecording && (
-            <View style={styles.recordingIndicator}>
-              <Animated.View
-                style={[
-                  styles.recordingDot,
-                  { backgroundColor: colors.recording, transform: [{ scale: pulseAnim }] },
-                ]}
-              />
-              <Text style={[styles.recordingText, { color: colors.recording }]}>REC</Text>
-            </View>
-          )}
-        </View>
+        <PageHeader
+          title={isRecording ? t("record.title_recording") : t("record.title_new")}
+          horizontalPadding={isDesktop ? 40 : undefined}
+          action={
+            isRecording ? (
+              <View style={styles.recordingIndicator}>
+                <Animated.View
+                  style={[
+                    styles.recordingDot,
+                    { backgroundColor: colors.recording, transform: [{ scale: pulseAnim }] },
+                  ]}
+                />
+                <Text style={[styles.recordingText, { color: colors.recording }]}>REC</Text>
+              </View>
+            ) : undefined
+          }
+        />
 
+        <View style={[styles.body, isDesktop && styles.bodyDesktop]}>
         {/* Audio Source Selector (Web only) */}
         {isSystemAudioSupported && !isRecording && (
           <View style={styles.audioSourceContainer}>
@@ -281,7 +291,7 @@ export default function RecordScreen() {
                                 style={[
                                   styles.segmentText,
                                   {
-                                    color: segment.isPartial ? colors.primary + "99" : colors.primary,
+                                    color: segment.isPartial ? withAlpha(colors.primary, 0.6) : colors.primary,
                                     fontStyle: segment.isPartial ? "italic" : "normal",
                                   },
                                 ]}
@@ -315,6 +325,7 @@ export default function RecordScreen() {
             </Text>
           </View>
         )}
+        </View>
       </View>
     </ScreenContainer>
   );
@@ -323,25 +334,19 @@ export default function RecordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
     paddingBottom: 72,
   },
   containerDesktop: {
     maxWidth: 900,
     alignSelf: "center",
     width: "100%",
+  },
+  body: {
+    flex: 1,
+    paddingHorizontal: ScreenPadding.horizontal,
+  },
+  bodyDesktop: {
     paddingHorizontal: 40,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
   },
   recordingIndicator: {
     flexDirection: "row",
@@ -351,22 +356,22 @@ const styles = StyleSheet.create({
   recordingDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: BorderRadius.sm + 1,
   },
   recordingText: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
   },
   audioSourceContainer: {
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   audioSourceLabel: {
-    fontSize: 12,
-    marginBottom: 8,
+    fontSize: FontSize.sm,
+    marginBottom: Spacing.sm,
   },
   audioSourceSelector: {
     flexDirection: "row",
-    borderRadius: 8,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
     padding: 4,
   },
@@ -377,30 +382,30 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: BorderRadius.lg,
   },
   audioSourceText: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.medium,
   },
   audioSourceHint: {
     fontSize: 11,
-    marginTop: 8,
+    marginTop: Spacing.sm,
     textAlign: "center",
   },
   timerContainer: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: Spacing.xxxl,
   },
   timer: {
-    fontSize: 56,
+    fontSize: FontSize.timer,
     fontWeight: "300",
     fontVariant: ["tabular-nums"],
   },
   waveform: {
     height: 120,
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
     justifyContent: "center",
   },
   waveformBars: {
@@ -411,13 +416,13 @@ const styles = StyleSheet.create({
   },
   waveformBar: {
     width: 3,
-    borderRadius: 2,
+    borderRadius: BorderRadius.xs,
   },
   controls: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: 24,
+    gap: Spacing.xxl,
   },
   recordButton: {
     width: 96,
@@ -433,20 +438,20 @@ const styles = StyleSheet.create({
   },
   instructions: {
     textAlign: "center",
-    fontSize: 14,
+    fontSize: FontSize.md,
   },
   realtimeSection: {
-    marginTop: 16,
-    borderRadius: 8,
+    marginTop: Spacing.lg,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    padding: 16,
+    padding: Spacing.lg,
     flex: 1,
   },
   realtimeHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   realtimeHeaderLeft: {
     flexDirection: "row",
@@ -454,8 +459,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   realtimeTitle: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold,
   },
   realtimeStatus: {
     flexDirection: "row",
@@ -465,49 +470,49 @@ const styles = StyleSheet.create({
   statusDot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
+    borderRadius: BorderRadius.sm - 1,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
   },
   realtimeContent: {
     flex: 1,
   },
   realtimePlaceholder: {
-    fontSize: 13,
+    fontSize: FontSize.base,
     fontStyle: "italic",
     textAlign: "center",
-    paddingVertical: 20,
+    paddingVertical: Spacing.xl,
   },
   segmentItem: {
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   speakerLabel: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     marginBottom: 2,
   },
   segmentText: {
-    fontSize: 14,
+    fontSize: FontSize.md,
     lineHeight: 20,
   },
   segmentRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: Spacing.md,
   },
   segmentColumn: {
     flex: 1,
   },
   translationColumn: {
     borderLeftWidth: 2,
-    paddingLeft: 12,
+    paddingLeft: Spacing.md,
   },
   translationPending: {
-    fontSize: 12,
+    fontSize: FontSize.sm,
     fontStyle: "italic",
   },
   translationError: {
-    fontSize: 12,
+    fontSize: FontSize.sm,
   },
 });

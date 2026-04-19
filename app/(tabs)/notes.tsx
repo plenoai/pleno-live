@@ -12,6 +12,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/packages/components/screen-container";
+import { PageHeader } from "@/packages/components/page-header";
 import { RecordingCard } from "@/packages/components/recording-card";
 import { Haptics, Storage } from "@/packages/platform";
 import { IconSymbol } from "@/packages/components/ui/icon-symbol";
@@ -19,6 +20,14 @@ import { useRecordings } from "@/packages/lib/recordings-context";
 import { useColors } from "@/packages/hooks/use-colors";
 import { useResponsive } from "@/packages/hooks/use-responsive";
 import { useTranslation } from "@/packages/lib/i18n/context";
+import { withAlpha } from "@/packages/lib/color";
+import {
+  BorderRadius,
+  FontSize,
+  FontWeight,
+  ScreenPadding,
+  Spacing,
+} from "@/packages/constants/layout";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -234,21 +243,17 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer>
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={[styles.title, { color: colors.foreground }]}>{t("notes.title")}</Text>
-            <Text style={[styles.subtitle, { color: colors.muted }]}>
-              {state.recordings.length}{t("common.recording_noun")}
-            </Text>
-          </View>
-          {state.recordings.length > 0 && (
+      <PageHeader
+        title={t("notes.title")}
+        subtitle={`${state.recordings.length}${t("common.recording_noun")}`}
+        action={
+          state.recordings.length > 0 ? (
             <TouchableOpacity
               onPress={handleToggleSelectMode}
               style={[
                 styles.selectModeButton,
                 {
-                  backgroundColor: isSelectMode ? colors.primary + "20" : colors.surface,
+                  backgroundColor: isSelectMode ? withAlpha(colors.primary, 0.12) : colors.surface,
                   borderColor: isSelectMode ? colors.primary : colors.border,
                 },
               ]}
@@ -262,9 +267,9 @@ export default function HomeScreen() {
                 {isSelectMode ? "キャンセル" : "選択"}
               </Text>
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
+          ) : undefined
+        }
+      />
 
       <View style={styles.searchWrapper}>
         <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -295,7 +300,7 @@ export default function HomeScreen() {
         {/* Search History Dropdown */}
         {showSearchHistory && searchHistory.length > 0 && (
           <View style={[styles.searchHistoryDropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.searchHistoryHeader}>
+            <View style={[styles.searchHistoryHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.searchHistoryTitle, { color: colors.muted }]}>検索履歴</Text>
               <TouchableOpacity onPress={clearSearchHistory}>
                 <Text style={[styles.searchHistoryClear, { color: colors.primary }]}>クリア</Text>
@@ -423,7 +428,7 @@ export default function HomeScreen() {
               style={[
                 styles.tagFilterButton,
                 {
-                  backgroundColor: selectedTag === null ? colors.primary + "20" : colors.surface,
+                  backgroundColor: selectedTag === null ? withAlpha(colors.primary, 0.12) : colors.surface,
                   borderColor: selectedTag === null ? colors.primary : colors.border,
                 },
               ]}
@@ -445,7 +450,7 @@ export default function HomeScreen() {
                 style={[
                   styles.tagFilterButton,
                   {
-                    backgroundColor: selectedTag === tag ? colors.primary + "20" : colors.surface,
+                    backgroundColor: selectedTag === tag ? withAlpha(colors.primary, 0.12) : colors.surface,
                     borderColor: selectedTag === tag ? colors.primary : colors.border,
                   },
                 ]}
@@ -521,7 +526,7 @@ export default function HomeScreen() {
             style={[
               styles.batchDeleteButton,
               {
-                backgroundColor: selectedIds.size > 0 ? colors.error : colors.muted + "40",
+                backgroundColor: selectedIds.size > 0 ? colors.error : withAlpha(colors.muted, 0.25),
               },
             ]}
           >
@@ -535,50 +540,32 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-  },
-  subtitle: {
-    fontSize: 14,
-    marginTop: 4,
-  },
   selectModeButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius["2xl"],
     borderWidth: 1,
     gap: 6,
   },
   selectModeText: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
   },
   searchWrapper: {
     position: "relative",
-    marginHorizontal: 20,
+    marginHorizontal: ScreenPadding.horizontal,
     zIndex: 100,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    gap: 8,
+    gap: Spacing.sm,
   },
   searchHistoryDropdown: {
     position: "absolute",
@@ -586,61 +573,60 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: 4,
-    borderRadius: 8,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
   searchHistoryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.1)",
     marginBottom: 4,
   },
   searchHistoryTitle: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
   },
   searchHistoryClear: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
   },
   searchHistoryItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
   searchHistoryItemContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: Spacing.sm,
     flex: 1,
   },
   searchHistoryText: {
-    fontSize: 14,
+    fontSize: FontSize.md,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: FontSize.lg,
     padding: 0,
   },
   filterRow: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: ScreenPadding.horizontal,
+    paddingVertical: Spacing.md,
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 8,
+    gap: Spacing.sm,
   },
   filterButtons: {
     flexDirection: "row",
-    gap: 8,
+    gap: Spacing.sm,
     flexWrap: "wrap",
   },
   sortAndViewButtons: {
@@ -653,7 +639,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 32,
     height: 32,
-    borderRadius: 8,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
   },
   sortButton: {
@@ -661,27 +647,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
     gap: 4,
   },
   sortText: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
   },
   filterButton: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: BorderRadius["2xl"],
     borderWidth: 1,
   },
   filterText: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.medium,
   },
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingHorizontal: ScreenPadding.horizontal,
+    paddingBottom: ScreenPadding.listBottom,
     flexGrow: 1,
   },
   listContentDesktop: {},
@@ -694,7 +680,7 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   columnWrapper: {
-    gap: 12,
+    gap: Spacing.md,
   },
   emptyState: {
     flex: 1,
@@ -703,35 +689,35 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginTop: 16,
+    fontSize: FontSize["2xl"],
+    fontWeight: FontWeight.semibold,
+    marginTop: Spacing.lg,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: FontSize.md,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: Spacing.sm,
     lineHeight: 20,
   },
   tagFilterRow: {
-    paddingBottom: 8,
+    paddingBottom: Spacing.sm,
   },
   tagFilterContent: {
-    paddingHorizontal: 20,
-    gap: 8,
+    paddingHorizontal: ScreenPadding.horizontal,
+    gap: Spacing.sm,
   },
   tagFilterButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: BorderRadius["2xl"],
     borderWidth: 1,
     gap: 4,
   },
   tagFilterText: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.medium,
   },
   batchActionBar: {
     position: "absolute",
@@ -741,45 +727,45 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: ScreenPadding.horizontal,
+    paddingVertical: Spacing.lg,
     paddingBottom: 40,
     borderTopWidth: 1,
   },
   batchActionInfo: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: Spacing.md,
   },
   batchActionCount: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
   },
   batchActionButtons: {
     flexDirection: "row",
-    gap: 8,
+    gap: Spacing.sm,
   },
   batchActionButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
   },
   batchActionButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
   },
   batchDeleteButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
+    paddingHorizontal: ScreenPadding.horizontal,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.xl,
+    gap: Spacing.sm,
   },
   batchDeleteText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
   },
 });
