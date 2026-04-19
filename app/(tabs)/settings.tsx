@@ -601,13 +601,17 @@ function ToggleRow({ label, description, value, onValueChange, colors, disabled,
   colors: Colors; disabled?: boolean; noBorder?: boolean;
 }) {
   return (
-    <View style={[toggleRowStyles.row, !noBorder && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+    <View style={[
+      toggleRowStyles.row,
+      !noBorder && { borderBottomWidth: 1, borderBottomColor: colors.border },
+      disabled && { opacity: 0.5 },
+    ]}>
       <View style={{ flex: 1 }}>
         <Text style={[toggleRowStyles.label, { color: disabled ? colors.muted : colors.foreground }]}>{label}</Text>
         {description && <Text style={[toggleRowStyles.description, { color: colors.muted }]}>{description}</Text>}
       </View>
       <Switch
-        value={value}
+        value={disabled ? false : value}
         disabled={disabled}
         onValueChange={onValueChange}
         trackColor={{ false: colors.border, true: colors.primary }}
