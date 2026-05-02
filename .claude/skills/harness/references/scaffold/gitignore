@@ -1,0 +1,3 @@
+# Scaffold runtime state. Contains user prompts and stats — never commit.
+state/
+agents/.archive/
