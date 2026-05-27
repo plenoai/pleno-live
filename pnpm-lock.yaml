@@ -87,8 +87,8 @@ importers:
         specifier: ~15.0.8
         version: 15.0.8(expo@54.0.31)
       expo-device:
-        specifier: ^55.0.9
-        version: 55.0.9(expo@54.0.31)
+        specifier: ^56.0.4
+        version: 56.0.4(expo@54.0.31)
       expo-document-picker:
         specifier: ^14.0.8
         version: 14.0.8(expo@54.0.31)
@@ -3315,8 +3315,8 @@ packages:
     peerDependencies:
       expo: '*'
 
-  expo-device@55.0.9:
-    resolution: {integrity: sha512-BzeuL7lwg2jh/tU+HTJ5dxygB1tpfgThaguPPH86K0ujcj/4RBkC27i/i7nhSoWvL1pQIgUqL0L7WTtjcS9t/w==}
+  expo-device@56.0.4:
+    resolution: {integrity: sha512-ucVcGPkvBrl2QHuy7XcYex2Y6BETvJ6TREutZrwLGUDnlvbpKS8KfQoNZOpvkyo5Nmm9RrasYQ0CrXmBHho2mg==}
     peerDependencies:
       expo: '*'
 
@@ -9617,7 +9617,7 @@ snapshots:
       base64-js: 1.5.1
       expo: 54.0.31(@babel/core@7.28.5)(@expo/metro-runtime@6.1.2)(expo-router@6.0.21)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
 
-  expo-device@55.0.9(expo@54.0.31):
+  expo-device@56.0.4(expo@54.0.31):
     dependencies:
       expo: 54.0.31(@babel/core@7.28.5)(@expo/metro-runtime@6.1.2)(expo-router@6.0.21)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       ua-parser-js: 0.7.41
