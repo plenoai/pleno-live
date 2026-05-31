@@ -75,8 +75,8 @@ importers:
         specifier: ^12.0.12
         version: 12.0.12(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       expo-audio:
-        specifier: ~1.1.1
-        version: 1.1.1(expo-asset@12.0.12(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+        specifier: ~56.0.11
+        version: 56.0.11(expo-asset@12.0.12(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       expo-build-properties:
         specifier: ^1.0.10
         version: 1.0.10(expo@56.0.5)
@@ -3461,8 +3461,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-audio@1.1.1:
-    resolution: {integrity: sha512-CPCpJ+0AEHdzWROc0f00Zh6e+irLSl2ALos/LPvxEeIcJw1APfBa4DuHPkL4CQCWsVe7EnUjFpdwpqsEUWcP0g==}
+  expo-audio@56.0.11:
+    resolution: {integrity: sha512-naionxilr49IpEjmMqCj5gXHCSfOsgu3nZ/KXndexR05Tv6dET7dmespyZkcMrADJN07gA5hyqPUC5WqWuaFLw==}
     peerDependencies:
       expo: '*'
       expo-asset: '*'
@@ -10183,7 +10183,7 @@ snapshots:
       - supports-color
       - typescript
 
-  expo-audio@1.1.1(expo-asset@12.0.12(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
+  expo-audio@56.0.11(expo-asset@12.0.12(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
     dependencies:
       expo: 56.0.5(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(expo-router@6.0.21)(react-dom@19.1.0(react@19.1.0))(react-native-web@0.21.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
       expo-asset: 12.0.12(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
