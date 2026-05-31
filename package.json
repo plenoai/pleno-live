@@ -79,7 +79,7 @@
     "react-native-web": "~0.21.2",
     "react-native-worklets": "0.5.1",
     "serverless-http": "^4.0.0",
-    "superjson": "^1.13.3",
+    "superjson": "^2.2.6",
     "tailwind-merge": "^2.6.0",
     "zod": "^4.2.1"
   },
