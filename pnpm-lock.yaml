@@ -138,8 +138,8 @@ importers:
         specifier: ^4.22.1
         version: 4.22.1
       framer-motion:
-        specifier: ^12.25.0
-        version: 12.25.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        specifier: ^12.40.0
+        version: 12.40.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       jose:
         specifier: 6.2.3
         version: 6.2.3
@@ -3828,8 +3828,8 @@ packages:
     resolution: {integrity: sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==}
     engines: {node: '>= 0.6'}
 
-  framer-motion@12.25.0:
-    resolution: {integrity: sha512-mlWqd0rApIjeyhTCSNCqPYsUAEhkcUukZxH3ke6KbstBRPcxhEpuIjmiUQvB+1E9xkEm5SpNHBgHCapH/QHTWg==}
+  framer-motion@12.40.0:
+    resolution: {integrity: sha512-uaBd3qC1v3KQqBEjwTUd183K6PbS+j0yR9w9VmEOLWA/tnUcSn8Xa3uck7t4dgpDoUss8xQTcj8W2L07lrnLFg==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
       react: ^18.0.0 || ^19.0.0
@@ -4792,11 +4792,11 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  motion-dom@12.24.11:
-    resolution: {integrity: sha512-DlWOmsXMJrV8lzZyd+LKjG2CXULUs++bkq8GZ2Sr0R0RRhs30K2wtY+LKiTjhmJU3W61HK+rB0GLz6XmPvTA1A==}
+  motion-dom@12.40.0:
+    resolution: {integrity: sha512-HxU3ZaBwNPVQUBQf1xxgq+7JrPNZvjLVxgbpEZL7RrWJnsxOf0/OM+yrHG9ogLQ31Do/r57Oz2gQWPK+6q62mg==}
 
-  motion-utils@12.24.10:
-    resolution: {integrity: sha512-x5TFgkCIP4pPsRLpKoI86jv/q8t8FQOiM/0E8QKBzfMozWHfkKap2gA1hOki+B5g3IsBNpxbUnfOum1+dgvYww==}
+  motion-utils@12.39.0:
+    resolution: {integrity: sha512-8nadJAJjTtqRkmRF36FoJTrywK9nnFmnPwnSMyxaOCU7GDjN9RTMJIxx9De8ErM+vpPhMccr/6fo5WciyQLnMQ==}
 
   ms@2.0.0:
     resolution: {integrity: sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==}
@@ -10657,10 +10657,10 @@ snapshots:
 
   forwarded@0.2.0: {}
 
-  framer-motion@12.25.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
+  framer-motion@12.40.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:
-      motion-dom: 12.24.11
-      motion-utils: 12.24.10
+      motion-dom: 12.40.0
+      motion-utils: 12.39.0
       tslib: 2.8.1
     optionalDependencies:
       react: 19.1.0
@@ -11796,11 +11796,11 @@ snapshots:
 
   mkdirp@1.0.4: {}
 
-  motion-dom@12.24.11:
+  motion-dom@12.40.0:
     dependencies:
-      motion-utils: 12.24.10
+      motion-utils: 12.39.0
 
-  motion-utils@12.24.10: {}
+  motion-utils@12.39.0: {}
 
   ms@2.0.0: {}
 
