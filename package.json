@@ -49,7 +49,7 @@
     "expo-device": "^56.0.4",
     "expo-document-picker": "^14.0.8",
     "expo-font": "~56.0.5",
-    "expo-haptics": "~15.0.8",
+    "expo-haptics": "~56.0.3",
     "expo-keep-awake": "~15.0.8",
     "expo-linking": "~8.0.11",
     "expo-router": "~6.0.21",
