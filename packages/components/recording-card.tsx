@@ -6,9 +6,14 @@ import {
   StyleSheet,
   Alert,
   Platform,
-  Animated as RNAnimated,
 } from "react-native";
-import { Swipeable } from "react-native-gesture-handler";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import Reanimated, {
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+  type SharedValue,
+} from "react-native-reanimated";
 
 import { Haptics } from "@/packages/platform";
 import { IconSymbol } from "@/packages/components/ui/icon-symbol";
@@ -60,6 +65,45 @@ function getStatusInfo(status: Recording["status"]): { text: string; variant: St
   }
 }
 
+function DeleteActionView({
+  progress,
+  dragX,
+  onDelete,
+  errorColor,
+}: {
+  progress: SharedValue<number>;
+  dragX: SharedValue<number>;
+  onDelete: () => void;
+  errorColor: string;
+}) {
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [0, 1]),
+    transform: [
+      {
+        translateX: interpolate(
+          dragX.value,
+          [-80, 0],
+          [0, 80],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
+  }));
+
+  return (
+    <Reanimated.View style={[styles.deleteAction, animStyle]}>
+      <TouchableOpacity
+        style={[styles.deleteButton, { backgroundColor: errorColor }]}
+        onPress={onDelete}
+        activeOpacity={0.8}
+      >
+        <IconSymbol name="trash.fill" size={22} color="#FFFFFF" />
+        <Text style={styles.deleteText}>削除</Text>
+      </TouchableOpacity>
+    </Reanimated.View>
+  );
+}
+
 export interface RecordingCardProps {
   recording: Recording;
   onPress: () => void;
@@ -81,7 +125,7 @@ export const RecordingCard = React.memo(function RecordingCard({
 }: RecordingCardProps) {
   const colors = useColors();
   const statusInfo = getStatusInfo(recording.status);
-  const swipeableRef = useRef<Swipeable>(null);
+  const swipeableRef = useRef<React.ComponentRef<typeof Swipeable>>(null);
 
   const handleLongPress = useCallback(() => {
     if (isSelectMode) return;
@@ -109,42 +153,17 @@ export const RecordingCard = React.memo(function RecordingCard({
     ]);
   }, [recording.title, onDelete]);
 
-  const renderRightActions = (
-    progress: RNAnimated.AnimatedInterpolation<number>,
-    dragX: RNAnimated.AnimatedInterpolation<number>
-  ) => {
-    const translateX = dragX.interpolate({
-      inputRange: [-80, 0],
-      outputRange: [0, 80],
-      extrapolate: "clamp",
-    });
-
-    const opacity = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 1],
-    });
-
-    return (
-      <RNAnimated.View
-        style={[
-          styles.deleteAction,
-          {
-            opacity,
-            transform: [{ translateX }],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={[styles.deleteButton, { backgroundColor: colors.error }]}
-          onPress={handleDelete}
-          activeOpacity={0.8}
-        >
-          <IconSymbol name="trash.fill" size={22} color="#FFFFFF" />
-          <Text style={styles.deleteText}>削除</Text>
-        </TouchableOpacity>
-      </RNAnimated.View>
-    );
-  };
+  const renderRightActions = useCallback(
+    (progress: SharedValue<number>, dragX: SharedValue<number>) => (
+      <DeleteActionView
+        progress={progress}
+        dragX={dragX}
+        onDelete={handleDelete}
+        errorColor={colors.error}
+      />
+    ),
+    [handleDelete, colors.error]
+  );
 
   const cardContent = (
     <Card
