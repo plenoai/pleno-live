@@ -114,8 +114,8 @@ importers:
         specifier: ^56.0.15
         version: 56.0.15(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
       expo-splash-screen:
-        specifier: ~31.0.13
-        version: 31.0.13(expo@56.0.5)
+        specifier: ~56.0.10
+        version: 56.0.10(expo@56.0.5)(typescript@5.9.3)
       expo-status-bar:
         specifier: ~3.0.9
         version: 3.0.9(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
@@ -1157,8 +1157,8 @@ packages:
   '@expo/inline-modules@0.0.10':
     resolution: {integrity: sha512-DKEfq877UTAmL/gOT5aFhlLNDg/EVmTSca7JQMKDGR6mjFSAcrmQf4GJNsi6ztiaqj6cTnIfoSz0hAYdnr6RJQ==}
 
-  '@expo/json-file@10.0.8':
-    resolution: {integrity: sha512-9LOTh1PgKizD1VXfGQ88LtDH0lRwq9lsTb4aichWTWSWqy3Ugfkhfm3BhzBIkJJfQQ5iJu3m/BoRlEIjoCGcnQ==}
+  '@expo/json-file@10.0.16':
+    resolution: {integrity: sha512-fcVkWEj+hLuP2yt5W0aw6LmDRqSPWDLUSxOMcmFeV+algmIF59sQVKCwB9btjQLd4V6x9N0pISkQEkBubUHrCw==}
 
   '@expo/json-file@10.2.0':
     resolution: {integrity: sha512-S6XzKe3R9GQeHiUPXc3xJjOv2VJhOEwFYf7xdC2z2cUqt3kZJ9mSO877sNQloVdnW/SUCtPY3bexlM7nwq+CAQ==}
@@ -1203,11 +1203,6 @@ packages:
 
   '@expo/plist@0.7.0':
     resolution: {integrity: sha512-vrpryU1GoqSIRNqRB2D3IjXDmzNYfiQpEF6AH/xknlD7eiYmEDt3mb26V7cLcedcPG8PY/1xWHdBXVQJfEAh6Q==}
-
-  '@expo/prebuild-config@54.0.8':
-    resolution: {integrity: sha512-EA7N4dloty2t5Rde+HP0IEE+nkAQiu4A/+QGZGT9mFnZ5KKjPPkqSyYcRvP5bhQE10D+tvz6X0ngZpulbMdbsg==}
-    peerDependencies:
-      expo: '*'
 
   '@expo/prebuild-config@56.0.13':
     resolution: {integrity: sha512-caR1karpDasbNmM+LrcHKZrSnyEYdmxm7kedq+WjiuZg+9XAW5sbEjojo2i9Dq6cfbDJPyr7I0yEprLabnvmpA==}
@@ -3629,8 +3624,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-splash-screen@31.0.13:
-    resolution: {integrity: sha512-1epJLC1cDlwwj089R2h8cxaU5uk4ONVAC+vzGiTZH4YARQhL4Stlz1MbR6yAS173GMosvkE6CAeihR7oIbCkDA==}
+  expo-splash-screen@56.0.10:
+    resolution: {integrity: sha512-vDIlo8hzt9HlCZQ0kSY66v83D1WEXOJbVMeyPDfXDu9tbDdPMNUyDpi4WGJXikAjxnAKfbt5Mv5NnEbxINy+VA==}
     peerDependencies:
       expo: '*'
 
@@ -5639,10 +5634,6 @@ packages:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
     engines: {node: '>=8'}
 
-  slugify@1.6.6:
-    resolution: {integrity: sha512-h+z7HKHYXj6wJU+AnS/+IH8Uh9fdcX1Lrhg1/VMdf9PwoBQXFcXiAdsy2tSK0P6gKwJLXp02r90ahUCqHk9rrw==}
-    engines: {node: '>=8.0.0'}
-
   slugify@1.6.9:
     resolution: {integrity: sha512-vZ7rfeehZui7wQs438JXBckYLkIIdfHOXsaVEUMyS5fHo1483l1bMdo0EDSWYclY0yZKFOipDy4KHuKs6ssvdg==}
     engines: {node: '>=8.0.0'}
@@ -7338,17 +7329,17 @@ snapshots:
   '@expo/config-plugins@54.0.4':
     dependencies:
       '@expo/config-types': 54.0.10
-      '@expo/json-file': 10.0.8
+      '@expo/json-file': 10.0.16
       '@expo/plist': 0.4.9
       '@expo/sdk-runtime-versions': 1.0.0
       chalk: 4.1.2
       debug: 4.4.3
       getenv: 2.0.0
-      glob: 13.0.0
+      glob: 13.0.6
       resolve-from: 5.0.0
       semver: 7.8.1
       slash: 3.0.0
-      slugify: 1.6.6
+      slugify: 1.6.9
       xcode: 3.0.1
       xml2js: 0.6.0
     transitivePeerDependencies:
@@ -7382,15 +7373,15 @@ snapshots:
       '@babel/code-frame': 7.10.4
       '@expo/config-plugins': 54.0.4
       '@expo/config-types': 54.0.10
-      '@expo/json-file': 10.0.8
+      '@expo/json-file': 10.2.0
       deepmerge: 4.3.1
       getenv: 2.0.0
-      glob: 13.0.0
+      glob: 13.0.6
       require-from-string: 2.0.2
       resolve-from: 5.0.0
       resolve-workspace-root: 2.0.1
       semver: 7.8.1
-      slugify: 1.6.6
+      slugify: 1.6.9
       sucrase: 3.35.1
     transitivePeerDependencies:
       - supports-color
@@ -7500,7 +7491,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@expo/json-file@10.0.8':
+  '@expo/json-file@10.0.16':
     dependencies:
       '@babel/code-frame': 7.10.4
       json5: 2.2.3
@@ -7623,22 +7614,6 @@ snapshots:
       '@xmldom/xmldom': 0.8.13
       base64-js: 1.5.1
       xmlbuilder: 15.1.1
-
-  '@expo/prebuild-config@54.0.8(expo@56.0.5)':
-    dependencies:
-      '@expo/config': 12.0.13
-      '@expo/config-plugins': 54.0.4
-      '@expo/config-types': 54.0.10
-      '@expo/image-utils': 0.8.8
-      '@expo/json-file': 10.0.8
-      '@react-native/normalize-colors': 0.81.5
-      debug: 4.4.3
-      expo: 56.0.5(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(expo-router@6.0.21)(react-dom@19.1.0(react@19.2.6))(react-native-web@0.21.2(react-dom@19.1.0(react@19.2.6))(react@19.2.6))(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
-      resolve-from: 5.0.0
-      semver: 7.8.1
-      xml2js: 0.6.0
-    transitivePeerDependencies:
-      - supports-color
 
   '@expo/prebuild-config@56.0.13(typescript@5.9.3)':
     dependencies:
@@ -10379,12 +10354,15 @@ snapshots:
       - supports-color
       - typescript
 
-  expo-splash-screen@31.0.13(expo@56.0.5):
+  expo-splash-screen@56.0.10(expo@56.0.5)(typescript@5.9.3):
     dependencies:
-      '@expo/prebuild-config': 54.0.8(expo@56.0.5)
+      '@expo/config-plugins': 56.0.8(typescript@5.9.3)
+      '@expo/image-utils': 0.10.1(typescript@5.9.3)
       expo: 56.0.5(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(expo-router@6.0.21)(react-dom@19.1.0(react@19.2.6))(react-native-web@0.21.2(react-dom@19.1.0(react@19.2.6))(react@19.2.6))(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
+      xml2js: 0.6.0
     transitivePeerDependencies:
       - supports-color
+      - typescript
 
   expo-status-bar@3.0.9(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6):
     dependencies:
@@ -12729,8 +12707,6 @@ snapshots:
   sisteransi@1.0.5: {}
 
   slash@3.0.0: {}
-
-  slugify@1.6.6: {}
 
   slugify@1.6.9: {}
 
