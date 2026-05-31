@@ -64,7 +64,7 @@
     "expo-video": "~3.0.15",
     "express": "^4.22.1",
     "framer-motion": "^12.25.0",
-    "jose": "6.1.0",
+    "jose": "6.2.3",
     "lucide-react": "^0.562.0",
     "mysql2": "^3.16.0",
     "nativewind": "^4.2.1",
