@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from "react-native";
 import { useColors } from "@/packages/hooks/use-colors";
@@ -439,7 +440,7 @@ const meta: Meta<typeof FilterControls> = {
   title: "Notes/FilterControls",
   component: FilterControls,
   decorators: [
-    (Story) => (
+    (Story: ComponentType) => (
       <View style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
         <Story />
       </View>

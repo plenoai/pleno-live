@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { useColors } from "@/packages/hooks/use-colors";
@@ -727,7 +728,7 @@ const meta: Meta<typeof NoteDetailTabs> = {
   title: "NoteDetail/Tabs",
   component: NoteDetailTabs,
   decorators: [
-    (Story) => (
+    (Story: ComponentType) => (
       <View style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
         <Story />
       </View>
