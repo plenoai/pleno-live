@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ScrollView } from "react-native";
 import { RecordingCard } from "@/packages/components/recording-card";
@@ -7,7 +8,7 @@ const meta: Meta<typeof RecordingCard> = {
   title: "Notes/RecordingCard",
   component: RecordingCard,
   decorators: [
-    (Story) => (
+    (Story: ComponentType) => (
       <ScrollView style={{ flex: 1, backgroundColor: "#f5f5f5", padding: 16 }}>
         <Story />
       </ScrollView>

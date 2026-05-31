@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { View, Text, StyleSheet } from "react-native";
 import { useColors } from "@/packages/hooks/use-colors";
@@ -412,7 +413,7 @@ const meta: Meta<typeof SettingsStats> = {
   title: "Settings/Stats",
   component: SettingsStats,
   decorators: [
-    (Story) => (
+    (Story: ComponentType) => (
       <View style={{ flex: 1, backgroundColor: "#f5f5f5", paddingTop: 20 }}>
         <Story />
       </View>

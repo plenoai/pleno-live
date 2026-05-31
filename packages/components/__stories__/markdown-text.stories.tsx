@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { View, StyleSheet } from "react-native";
 import { MarkdownText } from "@/packages/components/ui/markdown-text";
@@ -26,7 +27,7 @@ const meta: Meta<typeof MarkdownTextStory> = {
   title: "UI/MarkdownText",
   component: MarkdownTextStory,
   decorators: [
-    (Story) => (
+    (Story: ComponentType) => (
       <View style={{ flex: 1 }}>
         <Story />
       </View>

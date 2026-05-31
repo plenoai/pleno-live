@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { View, Text, StyleSheet, TouchableOpacity, Animated, useWindowDimensions } from "react-native";
 import { useColors } from "@/packages/hooks/use-colors";
@@ -259,7 +260,7 @@ const meta: Meta<typeof RecordControlsDemo> = {
   title: "Recording/RecordControls",
   component: RecordControlsDemo,
   decorators: [
-    (Story) => (
+    (Story: ComponentType) => (
       <View style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
         <Story />
       </View>
