@@ -123,8 +123,8 @@ importers:
         specifier: ~3.0.9
         version: 3.0.9(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
       expo-symbols:
-        specifier: ~56.0.5
-        version: 56.0.5(expo-font@56.0.5(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
+        specifier: ~56.0.6
+        version: 56.0.6(expo-font@56.0.5(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
       expo-system-ui:
         specifier: ~6.0.9
         version: 6.0.9(expo@56.0.5)(react-native-web@0.21.2(react-dom@19.1.0(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))
@@ -3724,8 +3724,8 @@ packages:
   expo-structured-headers@56.0.0:
     resolution: {integrity: sha512-Yv4x+SQxNnMQm4nu8NFfzx197YaDhdYH2N0u7tGErwWTmH9Tm1SAhqo7bLbBWLC9kf7W+kdzTshLU9rTiCXWGw==}
 
-  expo-symbols@56.0.5:
-    resolution: {integrity: sha512-RIukH0Xo80C7RU8qreipL2SPy2Py+Km8JFPbCmbPQpHkM3DW9Znlmg6VfhzbtUOlO5EuNSF0lAJ3l2VJi6qYrw==}
+  expo-symbols@56.0.6:
+    resolution: {integrity: sha512-BrA81DjcNafdj7gXVhdrExb9LtUiSVyOf/NavyMmDAHgHMY1GqeR5cnn1PSAZeYKnSgQhee/H89XUpAxtog5hg==}
     peerDependencies:
       expo: '*'
       expo-font: '*'
@@ -10469,7 +10469,7 @@ snapshots:
 
   expo-structured-headers@56.0.0: {}
 
-  expo-symbols@56.0.5(expo-font@56.0.5(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6):
+  expo-symbols@56.0.6(expo-font@56.0.5(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(expo@56.0.5)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6):
     dependencies:
       '@expo-google-fonts/material-symbols': 0.4.38
       expo: 56.0.5(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(expo-router@6.0.21)(react-dom@19.1.0(react@19.2.6))(react-native-web@0.21.2(react-dom@19.1.0(react@19.2.6))(react@19.2.6))(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
