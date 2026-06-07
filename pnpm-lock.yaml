@@ -120,8 +120,8 @@ importers:
         specifier: ~56.0.10
         version: 56.0.10(expo@56.0.9)(typescript@5.9.3)
       expo-status-bar:
-        specifier: ~3.0.9
-        version: 3.0.9(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
+        specifier: ~56.0.4
+        version: 56.0.4(expo@56.0.9)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
       expo-symbols:
         specifier: ~56.0.6
         version: 56.0.6(expo-font@56.0.5(expo@56.0.9)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(expo@56.0.9)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
@@ -3634,9 +3634,10 @@ packages:
     peerDependencies:
       expo: '*'
 
-  expo-status-bar@3.0.9:
-    resolution: {integrity: sha512-xyYyVg6V1/SSOZWh4Ni3U129XHCnFHBTcUo0dhWtFDrZbNp/duw5AGsQfb2sVeU0gxWHXSY1+5F0jnKYC7WuOw==}
+  expo-status-bar@56.0.4:
+    resolution: {integrity: sha512-IGs/fDfkHXofy2ZQrGiXayhFK04HB85FZXorhcEhDZEcqASKgSqpak+HwUtAaR0MeTJwWyHNF7I6VmVbbp8EcA==}
     peerDependencies:
+      expo: '*'
       react: '*'
       react-native: '*'
 
@@ -10184,11 +10185,11 @@ snapshots:
       - supports-color
       - typescript
 
-  expo-status-bar@3.0.9(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6):
+  expo-status-bar@56.0.4(expo@56.0.9)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6):
     dependencies:
+      expo: 56.0.9(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(expo-router@6.0.21)(react-dom@19.1.0(react@19.2.6))(react-native-web@0.21.2(react-dom@19.1.0(react@19.2.6))(react@19.2.6))(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
       react: 19.2.6
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6)
-      react-native-is-edge-to-edge: 1.2.1(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
 
   expo-structured-headers@56.0.0: {}
 
