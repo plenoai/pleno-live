@@ -60,7 +60,7 @@
     "expo-symbols": "~56.0.5",
     "expo-system-ui": "~6.0.9",
     "expo-task-manager": "^14.0.9",
-    "expo-updates": "~29.0.16",
+    "expo-updates": "~56.0.18",
     "expo-video": "~56.1.2",
     "express": "^4.22.1",
     "framer-motion": "^12.40.0",
