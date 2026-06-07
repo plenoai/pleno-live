@@ -65,7 +65,7 @@
     "express": "^4.22.1",
     "framer-motion": "^12.40.0",
     "jose": "6.2.3",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "^1.17.0",
     "mysql2": "^3.22.5",
     "nativewind": "^4.2.5",
     "react": "19.2.6",
