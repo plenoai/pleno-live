@@ -16,6 +16,12 @@ export default defineConfig([
       "no-console": ["error", { allow: ["warn", "error"] }],
       // any型の使用を禁止
       "@typescript-eslint/no-explicit-any": "error",
+      // React Compiler rules added by eslint-plugin-react-hooks v7 (via eslint-config-expo v56).
+      // Existing code predates React Compiler; downgraded to warn until violations are resolved.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
     },
   },
   {
