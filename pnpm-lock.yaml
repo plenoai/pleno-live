@@ -70,7 +70,7 @@ importers:
         version: 16.6.1
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(mysql2@3.22.4(@types/node@25.9.1))
+        version: 0.45.2(mysql2@3.22.5(@types/node@25.9.1))
       expo:
         specifier: ~56.0.9
         version: 56.0.9(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(expo-router@6.0.21)(react-dom@19.1.0(react@19.2.6))(react-native-web@0.21.2(react-dom@19.1.0(react@19.2.6))(react@19.2.6))(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
@@ -150,8 +150,8 @@ importers:
         specifier: ^0.562.0
         version: 0.562.0(react@19.2.6)
       mysql2:
-        specifier: ^3.22.4
-        version: 3.22.4(@types/node@25.9.1)
+        specifier: ^3.22.5
+        version: 3.22.5(@types/node@25.9.1)
       nativewind:
         specifier: ^4.2.5
         version: 4.2.5(react-native-reanimated@4.1.7(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native-safe-area-context@5.8.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native-svg@15.15.1(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(tailwindcss@3.4.19(tsx@4.21.0)(yaml@2.9.0))
@@ -4788,8 +4788,8 @@ packages:
   multitars@1.0.0:
     resolution: {integrity: sha512-H/J4fMLedtudftaYMOg7ajzLYgT3/rwbWVJbqr/iUgB8DQztn38ys5HOqI1CzSxx8QhXXwOOnnBvd4v3jG5+Mg==}
 
-  mysql2@3.22.4:
-    resolution: {integrity: sha512-CtXYlmL7ZamiYKbmqkamQHWJROUHSfm+f3kByzGfknw7kW51mcB2ouMUqYq1XfYxbXmnWo6RhPydx6OCqdgcmQ==}
+  mysql2@3.22.5:
+    resolution: {integrity: sha512-95uZ2TrPWAZdwpB3vvvDbmEMcNG8yIeNCyu6GUcr/QnWEE/wXm7+mhOCsdQfWQDTV7qYT/PDUZ4U4UPP4AsXqQ==}
     engines: {node: '>= 8.0'}
     peerDependencies:
       '@types/node': '>= 8'
@@ -9599,9 +9599,9 @@ snapshots:
       esbuild: 0.28.0
       tsx: 4.21.0
 
-  drizzle-orm@0.45.2(mysql2@3.22.4(@types/node@25.9.1)):
+  drizzle-orm@0.45.2(mysql2@3.22.5(@types/node@25.9.1)):
     optionalDependencies:
-      mysql2: 3.22.4(@types/node@25.9.1)
+      mysql2: 3.22.5(@types/node@25.9.1)
 
   dunder-proto@1.0.1:
     dependencies:
@@ -11594,7 +11594,7 @@ snapshots:
 
   multitars@1.0.0: {}
 
-  mysql2@3.22.4(@types/node@25.9.1):
+  mysql2@3.22.5(@types/node@25.9.1):
     dependencies:
       '@types/node': 25.9.1
       aws-ssl-profiles: 1.1.2
