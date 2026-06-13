@@ -94,7 +94,7 @@
     "concurrently": "^10.0.3",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.10",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "eslint": "^9.39.2",
     "eslint-config-expo": "~56.0.4",
     "eslint-plugin-react-native": "^5.0.0",
