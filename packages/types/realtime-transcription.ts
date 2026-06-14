@@ -37,6 +37,12 @@ export interface TranscriptSegment {
   speaker?: string;
   /** 信頼度スコア（0-1） */
   confidence?: number;
+  /**
+   * 表示用に結合された場合の構成元セグメントIDリスト（mergeSegmentsが付与）。
+   * 結合表示でも各構成セグメントの翻訳を引き当てられるようにするための一時フィールド。
+   * 永続化はされない。
+   */
+  sourceIds?: string[];
 }
 
 /**
