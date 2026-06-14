@@ -20,6 +20,8 @@ interface RefinedGroup {
   headId: string;
   /** このグループに含まれる全セグメントID */
   ids: string[];
+  /** このグループに含まれる全構成元（raw）セグメントID。翻訳の引き当てに使用 */
+  sourceIds: string[];
   /** Geminiで校正したテキスト */
   refinedText: string;
   /** 話者（先頭セグメントから引き継ぐ） */
@@ -59,11 +61,15 @@ export function useTranscriptRefinement(
         speaker: s.speaker,
       })),
     }).then(({ refined, originalIds }) => {
+      // 構成元のraw（merge前）セグメントIDを集約。翻訳は raw ID 単位で保持されるため、
+      // これを保持しないと校正グループ内の2件目以降の翻訳が表示で欠落する。
+      const sourceIds = batch.flatMap(s => s.sourceIds ?? [s.id]);
       setRefinedGroups(prev => [
         ...prev,
         {
           headId: originalIds[0],
           ids: originalIds,
+          sourceIds,
           refinedText: refined,
           speaker: batch[0].speaker,
         },
@@ -102,6 +108,7 @@ export function useTranscriptRefinement(
           ...segment,
           text: group.refinedText,
           speaker: group.speaker,
+          sourceIds: group.sourceIds,
         });
       } else {
         result.push(segment);

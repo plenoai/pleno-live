@@ -9,6 +9,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Alert } from "react-native";
 import { trpc } from "@/packages/lib/trpc";
 import { RealtimeTranscriptionClient } from "@/packages/lib/realtime-transcription";
+import { applyPartial, applyCommitted, mergeSegments } from "@/packages/lib/transcript-segments";
 import { createAudioStream, type AudioStreamController, type AudioStreamResult } from "@/packages/platform";
 import type {
   TranscriptSegment,
@@ -169,26 +170,16 @@ export function useRealtimeTranscription() {
         const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
 
         setState((prev) => {
-          const lastSegment = prev.segments[prev.segments.length - 1];
-
-          if (lastSegment?.isPartial) {
-            const newSegment: TranscriptSegment = { ...lastSegment, text: data.text, timestamp };
-            if (callbacksRef.current?.onPartial) {
-              setTimeout(() => callbacksRef.current?.onPartial?.(newSegment), 0);
-            }
-            return { ...prev, segments: [...prev.segments.slice(0, -1), newSegment] };
-          }
-
-          const newSegment: TranscriptSegment = {
-            id: generateSegmentId(),
-            text: data.text,
-            isPartial: true,
+          const { segments, segment } = applyPartial(
+            prev.segments,
+            data.text,
             timestamp,
-          };
+            generateSegmentId,
+          );
           if (callbacksRef.current?.onPartial) {
-            setTimeout(() => callbacksRef.current?.onPartial?.(newSegment), 0);
+            setTimeout(() => callbacksRef.current?.onPartial?.(segment), 0);
           }
-          return { ...prev, segments: [...prev.segments, newSegment] };
+          return { ...prev, segments };
         });
       });
 
@@ -196,26 +187,17 @@ export function useRealtimeTranscription() {
         const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
 
         setState((prev) => {
-          const lastSegment = prev.segments[prev.segments.length - 1];
-
-          if (lastSegment?.isPartial && lastSegment.text === data.text) {
-            const newSegment: TranscriptSegment = { ...lastSegment, isPartial: false, timestamp };
-            if (callbacksRef.current?.onCommitted) {
-              setTimeout(() => callbacksRef.current?.onCommitted?.(newSegment), 0);
-            }
-            return { ...prev, segments: [...prev.segments.slice(0, -1), newSegment] };
-          }
-
-          const newSegment: TranscriptSegment = {
-            id: generateSegmentId(),
-            text: data.text,
-            isPartial: false,
+          const { segments, segment } = applyCommitted(
+            prev.segments,
+            data.text,
             timestamp,
-          };
+            undefined,
+            generateSegmentId,
+          );
           if (callbacksRef.current?.onCommitted) {
-            setTimeout(() => callbacksRef.current?.onCommitted?.(newSegment), 0);
+            setTimeout(() => callbacksRef.current?.onCommitted?.(segment), 0);
           }
-          return { ...prev, segments: [...prev.segments, newSegment] };
+          return { ...prev, segments };
         });
       });
 
@@ -229,69 +211,17 @@ export function useRealtimeTranscription() {
         const speakerId = data.words.find((w) => w.speaker_id)?.speaker_id;
 
         setState((prev) => {
-          const lastSegment = prev.segments[prev.segments.length - 1];
-          let newSegment: TranscriptSegment;
-
-          // 最後のセグメントが同じテキストなら、話者情報を更新するだけ（二重追加を防ぐ）
-          if (lastSegment && !lastSegment.isPartial && lastSegment.text === data.text) {
-            newSegment = {
-              ...lastSegment,
-              speaker: speakerId,
-            };
-            // コールバック呼び出し（翻訳連携用）
-            if (callbacksRef.current?.onCommitted) {
-              setTimeout(() => callbacksRef.current?.onCommitted?.(newSegment), 0);
-            }
-            return {
-              ...prev,
-              segments: [
-                ...prev.segments.slice(0, -1),
-                newSegment,
-              ],
-            };
-          }
-
-          // 最後のpartialセグメントをcommittedに変換（話者情報付き）
-          if (lastSegment?.isPartial) {
-            newSegment = {
-              ...lastSegment,
-              text: data.text,
-              isPartial: false,
-              timestamp,
-              speaker: speakerId,
-            };
-            // コールバック呼び出し（翻訳連携用）
-            if (callbacksRef.current?.onCommitted) {
-              setTimeout(() => callbacksRef.current?.onCommitted?.(newSegment), 0);
-            }
-            return {
-              ...prev,
-              segments: [
-                ...prev.segments.slice(0, -1),
-                newSegment,
-              ],
-            };
-          }
-
-          // 新しいcommittedセグメントを追加
-          newSegment = {
-            id: generateSegmentId(),
-            text: data.text,
-            isPartial: false,
+          const { segments, segment } = applyCommitted(
+            prev.segments,
+            data.text,
             timestamp,
-            speaker: speakerId,
-          };
-          // コールバック呼び出し（翻訳連携用）
+            speakerId,
+            generateSegmentId,
+          );
           if (callbacksRef.current?.onCommitted) {
-            setTimeout(() => callbacksRef.current?.onCommitted?.(newSegment), 0);
+            setTimeout(() => callbacksRef.current?.onCommitted?.(segment), 0);
           }
-          return {
-            ...prev,
-            segments: [
-              ...prev.segments,
-              newSegment,
-            ],
-          };
+          return { ...prev, segments };
         });
       });
 
@@ -395,31 +325,10 @@ export function useRealtimeTranscription() {
    * 表示用にセグメントを結合（同じ話者の連続セグメントは空白で結合）
    * useMemoでキャッシュし、state.segmentsが変わった時のみ再計算
    */
-  const mergedSegments = useMemo((): TranscriptSegment[] => {
-    const merged: TranscriptSegment[] = [];
-
-    for (const segment of state.segments) {
-      const last = merged[merged.length - 1];
-
-      // 同じ話者（または両方話者なし）かつ両方committedの場合は結合
-      if (
-        last &&
-        !last.isPartial &&
-        !segment.isPartial &&
-        last.speaker === segment.speaker
-      ) {
-        merged[merged.length - 1] = {
-          ...last,
-          text: `${last.text} ${segment.text}`,
-          timestamp: segment.timestamp,
-        };
-      } else {
-        merged.push({ ...segment });
-      }
-    }
-
-    return merged;
-  }, [state.segments]);
+  const mergedSegments = useMemo(
+    (): TranscriptSegment[] => mergeSegments(state.segments),
+    [state.segments],
+  );
 
   /**
    * セグメントを統合して最終的な文字起こしテキストを生成

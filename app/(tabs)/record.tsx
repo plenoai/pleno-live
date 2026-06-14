@@ -20,6 +20,7 @@ import { useResponsive } from "@/packages/hooks/use-responsive";
 import { useRecordingSession } from "@/packages/lib/recording-session-context";
 import { useTranslation } from "@/packages/lib/i18n/context";
 import { useTranscriptRefinement } from "@/packages/hooks/use-transcript-refinement";
+import { aggregateTranslationView } from "@/packages/lib/translation-store";
 import { withAlpha } from "@/packages/lib/color";
 import {
   BorderRadius,
@@ -249,8 +250,15 @@ export default function RecordScreen() {
                   !segment.isPartial || index === mergedSegments.length - 1
                 )
                 .map((segment) => {
-                  const translation = translationEnabled ? getTranslation(segment.id) : undefined;
-                  const translationStatus = translationEnabled ? getTranslationStatus(segment.id) : undefined;
+                  // 結合表示されたセグメントは構成元の全IDの翻訳を集約する
+                  // （結合や校正によって2件目以降の翻訳が欠落しないようにする）
+                  const { translation, status: translationStatus } = translationEnabled
+                    ? aggregateTranslationView(
+                        segment.sourceIds ?? [segment.id],
+                        getTranslation,
+                        getTranslationStatus,
+                      )
+                    : { translation: undefined, status: undefined };
 
                   return (
                     <View key={segment.id} style={styles.segmentItem}>

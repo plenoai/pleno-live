@@ -4,11 +4,12 @@
  * 文字起こしセグメントを受け取り、設定された言語に翻訳します。
  * - Debounce: partialテキストの頻繁な更新を制御
  * - バッチ処理: 複数セグメントをまとめて翻訳
- * - キャッシュ: 翻訳済みテキストの再利用
+ * - 翻訳状態管理は純粋な TranslationStore に委譲（stale-while-revalidate等）
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect, useReducer } from "react";
 import { trpc } from "@/packages/lib/trpc";
+import { TranslationStore } from "@/packages/lib/translation-store";
 import type {
   TranscriptSegment,
   TranslationStatus,
@@ -21,12 +22,6 @@ interface UseRealtimeTranslationOptions {
   batchDelayMs?: number;
 }
 
-interface TranslationState {
-  translations: Map<string, string>;
-  pendingIds: Set<string>;
-  errors: Map<string, string>;
-}
-
 export function useRealtimeTranslation(options: UseRealtimeTranslationOptions) {
   const {
     enabled,
@@ -35,16 +30,13 @@ export function useRealtimeTranslation(options: UseRealtimeTranslationOptions) {
     batchDelayMs = 300,
   } = options;
 
-  const [state, setState] = useState<TranslationState>({
-    translations: new Map(),
-    pendingIds: new Set(),
-    errors: new Map(),
-  });
-
   const translateMutation = trpc.ai.translate.useMutation();
 
-  // キャッシュ: テキスト -> 翻訳結果
-  const cacheRef = useRef<Map<string, string>>(new Map());
+  // 翻訳状態の単一の真実源（純粋ストア）
+  const storeRef = useRef<TranslationStore>(new TranslationStore());
+
+  // ストア変更時に再レンダリングを強制する
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   // Debounce用タイマー
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,70 +52,32 @@ export function useRealtimeTranslation(options: UseRealtimeTranslationOptions) {
     const batch = [...pendingQueueRef.current];
     pendingQueueRef.current = [];
 
-    // キャッシュヒットをフィルタ
-    const uncachedItems = batch.filter(
-      (item) => !cacheRef.current.has(item.text)
-    );
+    // ストアにリクエストを登録。キャッシュ済み/未変化のものは即解決され除外される。
+    const toSend = storeRef.current.request(batch);
+    forceUpdate();
 
-    // キャッシュヒットした翻訳を即座に適用
-    const cachedTranslations = new Map<string, string>();
-    batch.forEach((item) => {
-      const cached = cacheRef.current.get(item.text);
-      if (cached) {
-        cachedTranslations.set(item.id, cached);
-      }
-    });
-
-    if (cachedTranslations.size > 0) {
-      setState((prev) => {
-        const newTranslations = new Map(prev.translations);
-        const newPending = new Set(prev.pendingIds);
-        cachedTranslations.forEach((text, id) => {
-          newTranslations.set(id, text);
-          newPending.delete(id);
-        });
-        return { ...prev, translations: newTranslations, pendingIds: newPending };
-      });
-    }
-
-    // 未キャッシュのみAPI呼び出し
-    if (uncachedItems.length === 0) return;
+    if (toSend.length === 0) return;
 
     try {
       const result = await translateMutation.mutateAsync({
-        texts: uncachedItems,
+        texts: toSend,
         targetLanguage,
       });
 
-      // キャッシュ更新 & 状態更新
-      setState((prev) => {
-        const newTranslations = new Map(prev.translations);
-        const newPending = new Set(prev.pendingIds);
-
-        result.translations.forEach((t) => {
-          newTranslations.set(t.id, t.translatedText);
-          newPending.delete(t.id);
-
-          // 元テキストでキャッシュ
-          const originalItem = uncachedItems.find((i) => i.id === t.id);
-          if (originalItem) {
-            cacheRef.current.set(originalItem.text, t.translatedText);
-          }
-        });
-
-        return { ...prev, translations: newTranslations, pendingIds: newPending };
-      });
+      storeRef.current.resolve(
+        result.translations.map((t) => ({
+          id: t.id,
+          translation: t.translatedText,
+        })),
+      );
+      forceUpdate();
     } catch (error) {
       console.error("[useRealtimeTranslation] Translation error:", error);
-      setState((prev) => {
-        const newErrors = new Map(prev.errors);
-        const newPending = new Set(prev.pendingIds);
-        uncachedItems.forEach((item) => {
-          newErrors.set(item.id, "Translation failed");
-          newPending.delete(item.id);
-        });
-        return { ...prev, errors: newErrors, pendingIds: newPending };
-      });
+      storeRef.current.fail(
+        toSend.map((item) => item.id),
+        "Translation failed",
+      );
+      forceUpdate();
     }
   }, [enabled, targetLanguage, translateMutation]);
 
@@ -132,29 +86,19 @@ export function useRealtimeTranslation(options: UseRealtimeTranslationOptions) {
     (segment: TranscriptSegment) => {
       if (!enabled || !segment.text.trim()) return;
 
-      // pending状態に追加
-      setState((prev) => {
-        const newPending = new Set(prev.pendingIds);
-        newPending.add(segment.id);
-        return { ...prev, pendingIds: newPending };
-      });
-
-      // キューに追加
       pendingQueueRef.current.push({ id: segment.id, text: segment.text });
 
-      // バッチタイマーをリセット
       if (batchTimerRef.current) {
         clearTimeout(batchTimerRef.current);
       }
       batchTimerRef.current = setTimeout(executeBatchTranslation, batchDelayMs);
     },
-    [enabled, batchDelayMs, executeBatchTranslation]
+    [enabled, batchDelayMs, executeBatchTranslation],
   );
 
   // Debounced翻訳 (partialテキスト用)
   const translatePartial = useCallback(
     (segment: TranscriptSegment) => {
-      console.log('[useRealtimeTranslation] translatePartial called:', { enabled, segment: segment.text.substring(0, 30) });
       if (!enabled) return;
 
       if (debounceTimerRef.current) {
@@ -165,46 +109,41 @@ export function useRealtimeTranslation(options: UseRealtimeTranslationOptions) {
         queueTranslation(segment);
       }, debounceMs);
     },
-    [enabled, debounceMs, queueTranslation]
+    [enabled, debounceMs, queueTranslation],
   );
 
   // 即座に翻訳 (committedテキスト用)
   const translateCommitted = useCallback(
     (segment: TranscriptSegment) => {
-      console.log('[useRealtimeTranslation] translateCommitted called:', { enabled, segment: segment.text.substring(0, 30) });
       if (!enabled) return;
+      // 直前のpartialのdebounceが残っていると古いテキストで上書きされうるためクリア
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
       queueTranslation(segment);
     },
-    [enabled, queueTranslation]
+    [enabled, queueTranslation],
   );
 
   // セグメントの翻訳テキストを取得
   const getTranslation = useCallback(
-    (segmentId: string): string | undefined => {
-      return state.translations.get(segmentId);
-    },
-    [state.translations]
+    (segmentId: string): string | undefined =>
+      storeRef.current.getTranslation(segmentId),
+    [],
   );
 
   // セグメントの翻訳ステータスを取得
   const getTranslationStatus = useCallback(
-    (segmentId: string): TranslationStatus | undefined => {
-      if (state.pendingIds.has(segmentId)) return "pending";
-      if (state.errors.has(segmentId)) return "error";
-      if (state.translations.has(segmentId)) return "completed";
-      return undefined;
-    },
-    [state]
+    (segmentId: string): TranslationStatus | undefined =>
+      storeRef.current.getStatus(segmentId),
+    [],
   );
 
-  // キャッシュクリア
+  // キャッシュ・状態クリア
   const clearCache = useCallback(() => {
-    cacheRef.current.clear();
-    setState({
-      translations: new Map(),
-      pendingIds: new Set(),
-      errors: new Map(),
-    });
+    storeRef.current.clear();
+    forceUpdate();
   }, []);
 
   // クリーンアップ
@@ -226,7 +165,7 @@ export function useRealtimeTranslation(options: UseRealtimeTranslationOptions) {
     getTranslation,
     getTranslationStatus,
     clearCache,
-    isTranslating: state.pendingIds.size > 0,
-    translations: state.translations,
+    isTranslating: storeRef.current.isTranslating,
+    translations: storeRef.current.snapshot(),
   };
 }
