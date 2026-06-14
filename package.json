@@ -51,7 +51,7 @@
     "expo-font": "~56.0.5",
     "expo-haptics": "~56.0.3",
     "expo-keep-awake": "~56.0.3",
-    "expo-linking": "~56.0.13",
+    "expo-linking": "~56.0.14",
     "expo-router": "~6.0.21",
     "expo-secure-store": "~56.0.4",
     "expo-sharing": "^56.0.15",
