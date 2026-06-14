@@ -50,7 +50,7 @@
     "expo-document-picker": "^56.0.4",
     "expo-font": "~56.0.5",
     "expo-haptics": "~56.0.3",
-    "expo-keep-awake": "~15.0.8",
+    "expo-keep-awake": "~56.0.3",
     "expo-linking": "~56.0.13",
     "expo-router": "~6.0.21",
     "expo-secure-store": "~56.0.4",
