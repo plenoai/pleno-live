@@ -200,7 +200,7 @@ importers:
     devDependencies:
       '@storybook/addon-ondevice-actions':
         specifier: '8'
-        version: 8.6.4(prettier@3.7.4)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
+        version: 8.6.4(prettier@3.8.4)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)
       '@storybook/addon-ondevice-controls':
         specifier: '10'
         version: 10.4.4(@gorhom/bottom-sheet@5.2.8(@types/react@19.2.15)(react-native-gesture-handler@3.0.0(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native-reanimated@4.1.7(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(@react-native-community/datetimepicker@8.4.4(expo@56.0.9)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6))(@react-native-community/slider@5.1.2)(@types/react@19.2.15)(react-dom@19.1.0(react@19.2.6))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)(typescript@5.9.3)
@@ -241,8 +241,8 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0(eslint@9.39.2(jiti@1.21.7))
       prettier:
-        specifier: ^3.7.4
-        version: 3.7.4
+        specifier: ^3.8.4
+        version: 3.8.4
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -5153,8 +5153,8 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
-  prettier@3.7.4:
-    resolution: {integrity: sha512-v6UNi1+3hSlVvv8fSaoUbggEM5VErKmmpGA7Pl3HF8V6uKY7rvClBOJlH6yNwQtfTueNkGVpOv/mtWL9L4bgRA==}
+  prettier@3.8.4:
+    resolution: {integrity: sha512-N2MylSdi48+5N/6S5j+maeHbUSIzzZ5uOcX5Hm4QpV8Dkb1HFjfAKTKX6yNPJQD9AhcT3ifHNB66tWTTJDi11Q==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -8250,10 +8250,10 @@ snapshots:
       polished: 4.3.1
       uuid: 14.0.0
 
-  '@storybook/addon-ondevice-actions@8.6.4(prettier@3.7.4)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)':
+  '@storybook/addon-ondevice-actions@8.6.4(prettier@3.8.4)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.15)(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@storybook/addon-actions': 8.6.15
-      '@storybook/core': 8.6.14(prettier@3.7.4)
+      '@storybook/core': 8.6.14(prettier@3.8.4)
       '@storybook/global': 5.0.0
       fast-deep-equal: 2.0.1
       react: 19.2.6
@@ -8286,7 +8286,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@storybook/core@8.6.14(prettier@3.7.4)':
+  '@storybook/core@8.6.14(prettier@3.8.4)':
     dependencies:
       '@storybook/theming': 8.6.14
       better-opn: 3.0.2
@@ -8300,7 +8300,7 @@ snapshots:
       util: 0.12.5
       ws: 8.21.0
     optionalDependencies:
-      prettier: 3.7.4
+      prettier: 3.8.4
     transitivePeerDependencies:
       - bufferutil
       - storybook
@@ -12003,7 +12003,7 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
-  prettier@3.7.4: {}
+  prettier@3.8.4: {}
 
   pretty-format@29.7.0:
     dependencies:
