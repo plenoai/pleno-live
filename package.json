@@ -21,7 +21,7 @@
     "storybook:ios": "cross-env EXPO_PUBLIC_STORYBOOK_ENABLED=true expo run:ios"
   },
   "dependencies": {
-    "@expo/vector-icons": "^15.0.3",
+    "@expo/vector-icons": "^15.1.1",
     "@mykin-ai/expo-audio-stream": "^0.3.5",
     "@radix-ui/react-slot": "^1.2.4",
     "@react-native-async-storage/async-storage": "^3.1.1",
