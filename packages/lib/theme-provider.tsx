@@ -48,7 +48,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (saved === "dark" || saved === "light") {
           setColorSchemeState(saved);
           applyScheme(saved);
-        } else if (systemScheme) {
+        } else if (systemScheme === 'light' || systemScheme === 'dark') {
           // No saved preference, use system scheme
           setColorSchemeState(systemScheme);
           applyScheme(systemScheme);
