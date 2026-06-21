@@ -26,7 +26,7 @@
     "@radix-ui/react-slot": "^1.2.5",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-community/datetimepicker": "8.4.4",
-    "@react-navigation/bottom-tabs": "^7.8.12",
+    "@react-navigation/bottom-tabs": "^7.18.0",
     "@react-navigation/elements": "^2.9.2",
     "@react-navigation/native": "^7.3.1",
     "@ronradtke/react-native-markdown-display": "^8.1.0",
