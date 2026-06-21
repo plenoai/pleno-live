@@ -38,7 +38,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cookie": "^1.1.1",
-    "dotenv": "^16.6.1",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "expo": "~56.0.12",
     "expo-asset": "^56.0.17",
