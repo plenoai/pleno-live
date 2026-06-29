@@ -132,8 +132,8 @@ importers:
         specifier: ^14.0.9
         version: 14.0.9(expo@56.0.12)(react-native@0.82.1(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))
       expo-updates:
-        specifier: ~56.0.18
-        version: 56.0.18(expo@56.0.12)(react-native@0.82.1(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
+        specifier: ~56.0.19
+        version: 56.0.19(expo@56.0.12)(react-native@0.82.1(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
       expo-video:
         specifier: ~56.1.2
         version: 56.1.2(expo@56.0.12)(react-native@0.82.1(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)
@@ -3692,8 +3692,8 @@ packages:
     peerDependencies:
       expo: '*'
 
-  expo-updates@56.0.18:
-    resolution: {integrity: sha512-GygYsKfzW0LQK2TLGC3gkq6e4Xbv16sDIHNLqNSN2NCoI8UmS9hjgjz7FhDfajcbN/Bch0WKxhJdcFLMZ+7rUA==}
+  expo-updates@56.0.19:
+    resolution: {integrity: sha512-tTSPYO5h8wDA6a+wQ2v/SRdnOdz29x0npGHCv+4Ev31Fz5r05Ii1Wgfh3BlTXNz8mikMReDsZCf6YN71YeQKpw==}
     hasBin: true
     peerDependencies:
       expo: '*'
@@ -10327,7 +10327,7 @@ snapshots:
     dependencies:
       expo: 56.0.12(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(expo-router@6.0.21)(react-dom@19.2.6(react@19.2.7))(react-native-web@0.21.2(react-dom@19.2.6(react@19.2.7))(react@19.2.7))(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.82.1(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7))(react-native@0.82.1(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
 
-  expo-updates@56.0.18(expo@56.0.12)(react-native@0.82.1(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7):
+  expo-updates@56.0.19(expo@56.0.12)(react-native@0.82.1(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.7))(react@19.2.7):
     dependencies:
       '@expo/code-signing-certificates': 0.0.6
       '@expo/plist': 0.7.0
