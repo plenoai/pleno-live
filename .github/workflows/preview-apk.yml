@@ -96,7 +96,8 @@ jobs:
 
       - name: Show captured node calls
         if: failure()
-        run: grep -B60 'EXIT: [1-9]' /tmp/nodeshim/calls.log || tail -60 /tmp/nodeshim/calls.log
+        run: |
+          grep -B60 'EXIT: [1-9]' /tmp/nodeshim/calls.log || tail -60 /tmp/nodeshim/calls.log
 
       - name: Get metadata
         id: meta
