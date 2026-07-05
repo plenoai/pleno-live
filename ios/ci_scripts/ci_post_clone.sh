@@ -25,8 +25,10 @@ cd "$CI_PRIMARY_REPOSITORY_PATH"
 corepack enable
 pnpm install --frozen-lockfile
 
-# --cleanはci_scriptsごとios/を消すため使わない。pod installはprebuildが実行する
+# pod installはprebuildが実行する。ios/にci_scriptsしか無い状態ではprebuildが
+# malformed判定でios/を再生成しci_scriptsを消すため復元する (実行中の本体はfd保持で完走する)
 pnpm exec expo prebuild --platform ios
+git checkout -- ios/ci_scripts
 
 # Xcodeビルドフェーズはbrew PATHを継承しないため、nodeの絶対パスを明示する
 echo "export NODE_BINARY=$(command -v node)" > ios/.xcode.env.local
