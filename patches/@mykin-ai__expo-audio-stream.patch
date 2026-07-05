@@ -1,0 +1,16 @@
+diff --git a/ios/AudioSessionManager.swift b/ios/AudioSessionManager.swift
+index 512d46fe25891b0799e54a7d24286fcfea85c0b6..4563e86daee43a0246ba2329e846240c2ae68419 100644
+--- a/ios/AudioSessionManager.swift
++++ b/ios/AudioSessionManager.swift
+@@ -3,6 +3,11 @@ import AVFoundation
+ import Accelerate
+ import ExpoModulesCore
+ 
++// RN 0.82+ / Expo 56: ExpoModulesCoreがReact-Coreの型を再エクスポートしなくなったため、
++// React由来のPromise block型をモジュール内typealiasで補う (定義はRCTBridgeModule.hと同一)
++typealias RCTPromiseResolveBlock = (Any?) -> Void
++typealias RCTPromiseRejectBlock = (String?, String?, Error?) -> Void
++
+ // Helper to convert to little-endian byte array
+ extension UInt32 {
+     var littleEndianBytes: [UInt8] {
