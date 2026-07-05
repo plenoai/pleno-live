@@ -64,3 +64,4 @@ run: jq -r '.build.PROFILE.env | to_entries[] | "\(.key)=\(.value)"' eas.json >>
 ```
 - Preview APK: `.github/workflows/preview-apk.yml` (main push → prerelease)
 - Release APK: `.github/workflows/release.yml` (version tag `v*` push → 正式リリース)
+- iOS: Xcode Cloud (main push → TestFlight)。`ios/ci_scripts/ci_post_clone.sh` がprebuildを実行。署名はクラウドマネージド、env varsはWorkflow設定側で管理 (eas.jsonのjq読み込み対象外)

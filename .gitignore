@@ -38,8 +38,9 @@ yarn-error.*
 
 app-example
 
-# generated native folders
-/ios
+# generated native folders (ios/ci_scripts はXcode Cloud用に追跡する)
+/ios/*
+!/ios/ci_scripts/
 /android
 
 # IDE
