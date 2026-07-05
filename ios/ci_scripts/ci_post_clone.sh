@@ -22,7 +22,6 @@ brew link --force --overwrite node@20
 
 cd "$CI_PRIMARY_REPOSITORY_PATH"
 
-# package.jsonのpackageManager (pnpm@9.12.0) をcorepackで解決
 corepack enable
 pnpm install --frozen-lockfile
 
