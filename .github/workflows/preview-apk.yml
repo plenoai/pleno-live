@@ -55,28 +55,14 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
           # arm64-v8aのみ・R8 minify有効・gif/webp無効でサイズ最小化
           # configuration-cache はReact Nativeのnodeプロセス呼び出しと非互換のため無効
+          # prebuild生成のgradle.propertiesは末尾改行なし。直結すると最終行のプロパティ値が壊れる
+          echo >> android/gradle.properties
           cat >> android/gradle.properties << 'EOF'
           reactNativeArchitectures=arm64-v8a
           android.enableMinifyInReleaseBuilds=true
           expo.gif.enabled=false
           expo.webp.enabled=false
           EOF
-
-      # gradleがnode子プロセスのstderrを飲み込むため、シムで全呼び出しの引数とstderrを記録する
-      - name: Install node shim (capture gradle node calls)
-        run: |
-          mkdir -p /tmp/nodeshim
-          REAL_NODE=$(command -v node)
-          cat > /tmp/nodeshim/node <<EOF
-          #!/bin/bash
-          echo "=== ARGS: \$*" >> /tmp/nodeshim/calls.log
-          "$REAL_NODE" "\$@" 2>> /tmp/nodeshim/calls.log
-          rc=\$?
-          echo "=== EXIT: \$rc" >> /tmp/nodeshim/calls.log
-          exit \$rc
-          EOF
-          chmod +x /tmp/nodeshim/node
-          echo "/tmp/nodeshim" >> $GITHUB_PATH
 
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92  # v6.2.0
         with:
@@ -93,11 +79,6 @@ jobs:
             --stacktrace \
             -x lint \
             -x lintRelease
-
-      - name: Show captured node calls
-        if: failure()
-        run: |
-          grep -B60 'EXIT: [1-9]' /tmp/nodeshim/calls.log || tail -60 /tmp/nodeshim/calls.log
 
       - name: Get metadata
         id: meta
