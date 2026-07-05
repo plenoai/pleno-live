@@ -44,8 +44,6 @@ jobs:
         run: pnpm check
 
       - name: Load env from eas.json
-        env:
-          APP_HMAC_SECRET: ${{ secrets.APP_HMAC_SECRET }}
         run: |
           jq -r '.build.preview.env | to_entries[] | "\(.key)=\(.value | gsub("\n"; "") | gsub("\r"; ""))"' eas.json | envsubst >> $GITHUB_ENV
 

@@ -7,7 +7,7 @@
 #   2. Report Navigator > Cloud タブ > Create Workflow で本リポジトリ(GitHub)を接続
 #   3. Workflow: Branch Changes = main / Archive - iOS / TestFlight (Internal Testing) 配布
 #   4. 署名はXcode Cloudのクラウドマネージド署名 (証明書・プロファイルの手動管理は不要)
-#   5. Workflow > Environment に EXPO_PUBLIC_API_URL と EXPO_PUBLIC_APP_HMAC_SECRET (Secret) を設定
+#   5. Workflow > Environment に EXPO_PUBLIC_API_URL を設定
 set -euo pipefail
 
 # Xcode CloudはCI=TRUEを設定するが、getenvのboolean解析が大文字TRUEで落ちるため上書き

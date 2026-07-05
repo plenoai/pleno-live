@@ -46,11 +46,6 @@ packages/
 - `apps/server/elevenlabs.ts`, `elevenlabs-realtime.ts`, `gemini.ts`
 - `packages/lib/settings-context.tsx` — STTプロバイダ設定
 
-### Auth (HMAC Challenge-Response)
-- Client: `packages/lib/auth.ts` (expo-crypto), `packages/lib/trpc.ts`
-- Server: `apps/server/attestation.ts`, `apps/server/_core/auth.ts`
-- Platform: `packages/platform/attestation/`
-
 ## Platform Abstraction (`packages/platform/`)
 
 各モジュールは `{name}.ts` + `{name}.native.ts` + `{name}.web.ts` + `index.ts` の構成:
