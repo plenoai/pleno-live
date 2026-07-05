@@ -74,6 +74,7 @@ jobs:
           ./gradlew assembleRelease \
             --build-cache \
             --parallel \
+            --stacktrace \
             -x lint \
             -x lintRelease
 
