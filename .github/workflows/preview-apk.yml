@@ -62,16 +62,21 @@ jobs:
           expo.webp.enabled=false
           EOF
 
-      # gradleがstderrを飲み込むため、configure時に失敗するautolinking execを事前に素で実行して原因を出す
-      - name: Debug expo autolinking exec
-        working-directory: android
+      # gradleがnode子プロセスのstderrを飲み込むため、シムで全呼び出しの引数とstderrを記録する
+      - name: Install node shim (capture gradle node calls)
         run: |
-          node --no-warnings --eval "require('expo/bin/autolinking')" expo-modules-autolinking \
-            mirror-kotlin-inline-modules \
-            --kotlin-files-mirror-directory "$PWD/../node_modules/expo/android/src/main/java/inline/modules/" \
-            --inline-modules-list-directory "$PWD/build-debug" \
-            --watched-directories-serialized "[]" \
-            || { echo "::error::autolinking exec failed (exit $?)"; exit 1; }
+          mkdir -p /tmp/nodeshim
+          REAL_NODE=$(command -v node)
+          cat > /tmp/nodeshim/node <<EOF
+          #!/bin/bash
+          echo "=== ARGS: \$*" >> /tmp/nodeshim/calls.log
+          "$REAL_NODE" "\$@" 2>> /tmp/nodeshim/calls.log
+          rc=\$?
+          echo "=== EXIT: \$rc" >> /tmp/nodeshim/calls.log
+          exit \$rc
+          EOF
+          chmod +x /tmp/nodeshim/node
+          echo "/tmp/nodeshim" >> $GITHUB_PATH
 
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92  # v6.2.0
         with:
@@ -88,6 +93,10 @@ jobs:
             --stacktrace \
             -x lint \
             -x lintRelease
+
+      - name: Show captured node calls
+        if: failure()
+        run: grep -B60 'EXIT: [1-9]' /tmp/nodeshim/calls.log || tail -60 /tmp/nodeshim/calls.log
 
       - name: Get metadata
         id: meta
