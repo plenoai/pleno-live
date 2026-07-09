@@ -71,7 +71,7 @@
     "jose": "6.2.3",
     "lucide-react": "^1.17.0",
     "mysql2": "^3.22.5",
-    "nativewind": "^4.2.5",
+    "nativewind": "^4.2.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.85.3",
