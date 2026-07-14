@@ -77,8 +77,8 @@ importers:
         specifier: ~57.0.0
         version: 57.0.0(expo-asset@56.0.18(expo@56.0.14)(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@5.9.3))(expo@56.0.14)(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       expo-build-properties:
-        specifier: ^56.0.21
-        version: 56.0.21(expo@56.0.14)
+        specifier: ^57.0.3
+        version: 57.0.3(expo@56.0.14)
       expo-constants:
         specifier: ~56.0.20
         version: 56.0.20(expo@56.0.14)(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))
@@ -1069,6 +1069,9 @@ packages:
 
   '@expo/schema-utils@56.0.2':
     resolution: {integrity: sha512-WcOH1E6rwxRqNwBzPOVhd5GBbMlS04+5n+ZMdhdwKOg/Kt3suV+F8F6An+z8mUJ8eSuMM3HD9Sj09t7vc/Xjkw==}
+
+  '@expo/schema-utils@57.0.1':
+    resolution: {integrity: sha512-IVdaqtP3+iHFRE/y22mKijQtZanLcB18q1zi2kfN6RINTCryyzM7qHGsWHc5LBJbOuj1G4avCOECs97hOJm0GQ==}
 
   '@expo/sdk-runtime-versions@1.0.0':
     resolution: {integrity: sha512-Doz2bfiPndXYFPMRwPyGa1k5QaKDVpY806UJj570epIiMzWaYyCtobasyfC++qfIXVb5Ocy7r3tP9d62hAQ7IQ==}
@@ -3537,8 +3540,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-build-properties@56.0.21:
-    resolution: {integrity: sha512-e3CeuoycpthiMsx0L8+NtHjx5O4C12FZHecdkGUZdWEm+R28QhzYHgxqfrxDr7epnzdPPR7yuUomScIJbLUnBg==}
+  expo-build-properties@57.0.3:
+    resolution: {integrity: sha512-oiqyD583acVmFVdF5nPSYEI7B/1ulOfIJhmfhr3bT51/64jtwaY0FzgVL8C2o23Z+CvCnEL8gOnhtH0sqcRWiA==}
     peerDependencies:
       expo: '*'
 
@@ -7341,6 +7344,8 @@ snapshots:
 
   '@expo/schema-utils@56.0.2': {}
 
+  '@expo/schema-utils@57.0.1': {}
+
   '@expo/sdk-runtime-versions@1.0.0': {}
 
   '@expo/spawn-async@1.8.0':
@@ -9918,9 +9923,9 @@ snapshots:
       react: 19.2.3
       react-native: 0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3)
 
-  expo-build-properties@56.0.21(expo@56.0.14):
+  expo-build-properties@57.0.3(expo@56.0.14):
     dependencies:
-      '@expo/schema-utils': 56.0.2
+      '@expo/schema-utils': 57.0.1
       expo: 56.0.14(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(@expo/metro-runtime@56.0.16)(expo-router@56.2.13)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native-worklets@0.8.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(react-native@0.85.3(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
       resolve-from: 5.0.0
       semver: 7.8.5
