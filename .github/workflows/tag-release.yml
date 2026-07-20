@@ -21,7 +21,7 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     outputs:
-      eligible: ${{ steps.current-main.outputs.eligible }}
+      eligible: ${{ steps.tag.outputs.release }}
       tag: ${{ steps.version.outputs.tag }}
 
     steps:
@@ -61,11 +61,14 @@ jobs:
           REMOTE_SHA="${REMOTE_REF%%$'\t'*}"
           if [ -z "$REMOTE_SHA" ]; then
             echo "create=true" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
           elif [ "$REMOTE_SHA" = "$EXPECTED_SHA" ]; then
             echo "create=false" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::Tag $TAG already points to $REMOTE_SHA instead of $EXPECTED_SHA"
-            exit 1
+            echo "create=false" >> "$GITHUB_OUTPUT"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping release because $TAG already points to $REMOTE_SHA"
           fi
 
       - name: Create release tag
