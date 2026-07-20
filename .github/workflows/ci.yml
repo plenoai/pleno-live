@@ -30,6 +30,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check Expo dependency compatibility
+        run: pnpm exec expo install --check
+
+      - name: Check iOS autolinking compatibility
+        run: |
+          if pnpm exec expo-modules-autolinking react-native-config --platform ios | grep -q "'react-native-svg'"; then
+            echo "react-native-svg 15 is incompatible with React Native 0.85"
+            exit 1
+          fi
+
       - name: Type check
         run: pnpm check
 
