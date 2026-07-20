@@ -100,7 +100,7 @@
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.1",
     "eslint": "^9.39.2",
-    "eslint-config-expo": "~56.0.4",
+    "eslint-config-expo": "~57.0.0",
     "eslint-plugin-react-native": "^5.0.0",
     "prettier": "^3.9.1",
     "qrcode": "^1.5.4",
