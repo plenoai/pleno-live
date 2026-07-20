@@ -60,7 +60,7 @@
     "expo-secure-store": "~56.0.4",
     "expo-sharing": "^57.0.3",
     "expo-splash-screen": "~56.0.12",
-    "expo-status-bar": "~56.0.4",
+    "expo-status-bar": "~57.0.1",
     "expo-symbols": "~56.0.6",
     "expo-system-ui": "~56.0.5",
     "expo-task-manager": "^56.0.20",
