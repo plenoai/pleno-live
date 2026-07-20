@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules/
+.pnpm-store/
 
 # Expo
 .expo/
@@ -78,4 +79,3 @@ android/
 
 # Storybook
 .rnstorybook/storybook.requires.ts
-

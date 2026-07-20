@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   applyPartial,
   applyCommitted,
+  applyTimestampedCommitted,
   mergeSegments,
 } from "../packages/lib/transcript-segments";
 import type { TranscriptSegment } from "../packages/types/realtime-transcription";
@@ -65,12 +66,12 @@ describe("applyCommitted", () => {
     expect(segment.text).toBe("こんにちは世界。");
   });
 
-  it("最後が同テキストのcommittedなら話者情報のみ更新しIDを維持する", () => {
+  it("timestamps版なら直前の同じcommittedへ話者情報を反映する", () => {
     const idGen = makeIdGen();
     const committed: TranscriptSegment[] = [
       { id: "c1", text: "確定済み", isPartial: false, timestamp: 0 },
     ];
-    const { segments, segment } = applyCommitted(
+    const { segments, segment } = applyTimestampedCommitted(
       committed,
       "確定済み",
       0,
@@ -81,6 +82,15 @@ describe("applyCommitted", () => {
     expect(segments).toHaveLength(1);
     expect(segment.id).toBe("c1");
     expect(segment.speaker).toBe("speaker_1");
+  });
+
+  it("同じ発話を連続で確定しても別セグメントとして残す", () => {
+    const idGen = makeIdGen();
+    const first = applyCommitted([], "はい", 1, undefined, idGen);
+    const second = applyCommitted(first.segments, "はい", 2, undefined, idGen);
+
+    expect(second.segments).toHaveLength(2);
+    expect(second.segments.map(({ id }) => id)).toEqual(["id-1", "id-2"]);
   });
 
   it("最後がcommittedで別テキストなら新しいcommittedを追加する", () => {
@@ -113,8 +123,20 @@ describe("applyCommitted", () => {
 describe("mergeSegments", () => {
   it("同じ話者の連続committedを結合し、全構成IDをsourceIdsで保持する", () => {
     const segments: TranscriptSegment[] = [
-      { id: "a", text: "おはよう", isPartial: false, timestamp: 0, speaker: "s1" },
-      { id: "b", text: "ございます", isPartial: false, timestamp: 1, speaker: "s1" },
+      {
+        id: "a",
+        text: "おはよう",
+        isPartial: false,
+        timestamp: 0,
+        speaker: "s1",
+      },
+      {
+        id: "b",
+        text: "ございます",
+        isPartial: false,
+        timestamp: 1,
+        speaker: "s1",
+      },
     ];
     const merged = mergeSegments(segments);
 

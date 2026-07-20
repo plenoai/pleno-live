@@ -9,7 +9,6 @@ import {
   type TranscriptionOptions
 } from "./elevenlabs";
 import { transcribeAudioWithGemini } from "./gemini";
-import { generateRealtimeToken } from "./elevenlabs-realtime";
 
 export const appRouter = router({
   system: systemRouter,
@@ -410,14 +409,6 @@ ${input.transcriptText}`,
         const refined = typeof content === "string" ? content.trim() : text;
 
         return { refined, originalIds: input.segments.map(s => s.id) };
-      }),
-
-    // Generate realtime transcription token
-    generateRealtimeToken: protectedProcedure
-      .mutation(async () => {
-        console.log("[TRPC] Generating realtime token");
-        const token = await generateRealtimeToken();
-        return { token };
       }),
 
     // Realtime translation endpoint

@@ -3,13 +3,22 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
+  workflow_call:
+    inputs:
+      tag:
+        description: Existing release tag to build
+        required: true
+        type: string
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -21,18 +30,19 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+          ref: ${{ env.RELEASE_TAG }}
 
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271  # v6.0.9
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 20
           cache: pnpm
 
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95  # v5.6.0
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           distribution: temurin
           java-version: 17
@@ -40,12 +50,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify release versions
+        run: node scripts/verify-release-version.mjs "$RELEASE_TAG"
+
       - name: Type check
         run: pnpm check
 
+      - name: Test
+        run: pnpm test
+
+      - name: Package Even G2 plugin
+        run: pnpm even:g2:pack
+
+      - name: Upload Even G2 package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: even-g2-package
+          path: dist/pleno-live-g2.ehpk
+
       - name: Load env from eas.json
         run: |
-          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("\\n"; "") | gsub("\\r"; ""))"' eas.json | envsubst >> $GITHUB_ENV
+          jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("\\n"; "") | gsub("\\r"; ""))"' eas.json | envsubst >> "$GITHUB_ENV"
 
       - name: Expo prebuild
         run: npx expo prebuild --platform android --clean
@@ -64,7 +89,7 @@ jobs:
           expo.webp.enabled=false
           EOF
 
-      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92  # v6.2.0
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
           gradle-home-cache-cleanup: true
 
@@ -82,22 +107,28 @@ jobs:
       - name: Get version
         id: version
         run: |
-          TAG="$GITHUB_REF_NAME"
+          TAG="$RELEASE_TAG"
           VERSION="${TAG#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "apk=pleno-live-$VERSION.apk" >> $GITHUB_OUTPUT
+          {
+            echo "version=$VERSION"
+            echo "tag=$TAG"
+            echo "apk=pleno-live-$VERSION.apk"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Rename APK
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk \
-             ${{ steps.version.outputs.apk }}
+             "${{ steps.version.outputs.apk }}"
+          cp android/app/build/outputs/apk/release/app-release.apk \
+             pleno-live-latest.apk
 
       - name: Upload artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: android-apk
-          path: ${{ steps.version.outputs.apk }}
+          path: |
+            ${{ steps.version.outputs.apk }}
+            pleno-live-latest.apk
 
   # iOSはXcode Cloudでビルド・TestFlight配布する (ios/ci_scripts/ci_post_clone.sh参照)
   release:
@@ -105,13 +136,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
 
       - name: Create Release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           name: Release ${{ needs.build-android.outputs.tag }}
+          tag_name: ${{ needs.build-android.outputs.tag }}
           generate_release_notes: true
           make_latest: true
           files: |
             android-apk/*.apk
+            even-g2-package/*.ehpk

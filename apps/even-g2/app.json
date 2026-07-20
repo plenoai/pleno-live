@@ -1,0 +1,21 @@
+{
+  "package_id": "com.plenoai.plenoliveg2",
+  "edition": "202601",
+  "name": "Pleno Live",
+  "version": "1.14.0",
+  "min_app_version": "2.0.0",
+  "min_sdk_version": "0.0.12",
+  "entrypoint": "index.html",
+  "permissions": [
+    {
+      "name": "g2-microphone",
+      "desc": "Captures speech through the glasses microphones for live transcription."
+    },
+    {
+      "name": "network",
+      "desc": "Requests a short-lived transcription token and streams microphone audio for transcription.",
+      "whitelist": ["https://live.plenoai.com", "wss://api.elevenlabs.io"]
+    }
+  ],
+  "supported_languages": ["ja"]
+}

@@ -6,6 +6,13 @@ import serverless from "serverless-http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import {
+  EvenG2TokenRateLimiter,
+  issueEvenG2RealtimeToken,
+} from "../even-g2-token";
+
+const evenG2TokenLimiter = new EvenG2TokenRateLimiter();
+const EVEN_G2_TOKEN_PATH = "/api/even-g2/realtime-token";
 
 function createApp() {
   const app = express();
@@ -18,16 +25,30 @@ function createApp() {
 
   app.use((req, res, next) => {
     const origin = req.headers.origin;
+    const isEvenG2TokenRequest =
+      req.path === EVEN_G2_TOKEN_PATH || req.path === `${EVEN_G2_TOKEN_PATH}/`;
     // Mobile app requests have no origin; web requests must match allowlist
-    if (origin && ALLOWED_ORIGINS.includes(origin)) {
-      res.header("Access-Control-Allow-Origin", origin);
-      res.header("Access-Control-Allow-Credentials", "true");
+    if (isEvenG2TokenRequest) {
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.header("Access-Control-Allow-Headers", "Accept, Content-Type");
+    } else {
+      res.vary("Origin");
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.header("Access-Control-Allow-Origin", origin);
+        res.header("Access-Control-Allow-Credentials", "true");
+      }
     }
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept, Authorization",
-    );
+    if (!isEvenG2TokenRequest) {
+      res.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS",
+      );
+      res.header(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+      );
+    }
 
     // Handle preflight requests
     if (req.method === "OPTIONS") {
@@ -35,6 +56,41 @@ function createApp() {
       return;
     }
     next();
+  });
+
+  app.post(EVEN_G2_TOKEN_PATH, async (req, res) => {
+    res.set({
+      "Cache-Control": "no-store, max-age=0",
+      Expires: "0",
+      Pragma: "no-cache",
+      "X-Content-Type-Options": "nosniff",
+    });
+
+    const contentLength = Number(req.headers["content-length"] || 0);
+    const bufferedBodyLength = Buffer.isBuffer(req.body) ? req.body.length : 0;
+    if (
+      req.headers["transfer-encoding"] !== undefined ||
+      !Number.isSafeInteger(contentLength) ||
+      contentLength < 0 ||
+      contentLength > 0 ||
+      bufferedBodyLength > 0
+    ) {
+      res.status(413).json({ error: "Request body not allowed" });
+      return;
+    }
+
+    const clientId = req.socket.remoteAddress || "unknown";
+    const result = await issueEvenG2RealtimeToken(clientId, evenG2TokenLimiter);
+
+    if (!result.ok) {
+      if (result.status === 429) {
+        res.setHeader("Retry-After", String(result.retryAfterSeconds));
+      }
+      res.status(result.status).json({ error: result.error });
+      return;
+    }
+
+    res.json({ token: result.token });
   });
 
   app.use(express.json({ limit: "50mb" }));

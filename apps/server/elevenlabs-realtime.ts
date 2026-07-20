@@ -38,18 +38,19 @@ export async function generateRealtimeToken(): Promise<string> {
         "xi-api-key": apiKey,
         "Content-Type": "application/json",
       },
-    }
+    },
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[ElevenLabs Realtime] Token generation failed: ${response.status}`, errorText);
+    console.error(
+      `[ElevenLabs Realtime] Token generation failed: ${response.status}`,
+    );
     throw new Error(
-      `Failed to generate realtime token: ${response.status} ${response.statusText}`
+      `Failed to generate realtime token: ${response.status} ${response.statusText}`,
     );
   }
 
-  const data = await response.json() as { token: string };
+  const data = (await response.json()) as { token: string };
 
   if (!data.token) {
     throw new Error("Token not found in response");

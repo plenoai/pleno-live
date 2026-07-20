@@ -10,10 +10,26 @@ import type {
   PartialTranscriptMessage,
   CommittedTranscriptMessage,
   CommittedTranscriptWithTimestampsMessage,
-  ErrorMessage,
 } from "@/packages/types/realtime-transcription";
 
-const ELEVENLABS_REALTIME_ENDPOINT = "wss://api.elevenlabs.io/v1/speech-to-text/realtime";
+const ELEVENLABS_REALTIME_ENDPOINT =
+  "wss://api.elevenlabs.io/v1/speech-to-text/realtime";
+const ELEVENLABS_REALTIME_MODEL = "scribe_v2_realtime";
+const ELEVENLABS_ERROR_MESSAGE_TYPES = new Set([
+  "auth_error",
+  "quota_exceeded",
+  "transcriber_error",
+  "input_error",
+  "error",
+  "commit_throttled",
+  "unaccepted_terms",
+  "rate_limited",
+  "queue_overflow",
+  "resource_exhausted",
+  "session_time_limit_exceeded",
+  "chunk_size_exceeded",
+  "insufficient_audio_activity",
+]);
 
 /**
  * イベントハンドラの型定義
@@ -31,6 +47,27 @@ export type RealtimeEvent =
   | "error"
   | "close";
 
+function getMessageType(message: RealtimeMessage): string {
+  return message.message_type || message.type || "unknown";
+}
+
+function getErrorMessage(message: RealtimeMessage): string {
+  if (typeof message.error === "string") {
+    return message.error;
+  }
+  if (typeof message.message === "string") {
+    return message.message;
+  }
+  return "Realtime transcription failed";
+}
+
+function isErrorMessageType(messageType: string): boolean {
+  return (
+    ELEVENLABS_ERROR_MESSAGE_TYPES.has(messageType) ||
+    messageType.endsWith("_error")
+  );
+}
+
 /**
  * Realtime Transcription WebSocketクライアント
  */
@@ -46,13 +83,13 @@ export class RealtimeTranscriptionClient {
    * @param options - リアルタイム文字起こしのオプション
    */
   async connect(token: string, options: RealtimeOptions = {}): Promise<void> {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log("[RealtimeClient] Already connected");
+    if (this.isConnecting) {
+      console.log("[RealtimeClient] Connection already in progress");
       return;
     }
 
-    if (this.isConnecting) {
-      console.log("[RealtimeClient] Connection already in progress");
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      console.log("[RealtimeClient] Already connected");
       return;
     }
 
@@ -61,61 +98,107 @@ export class RealtimeTranscriptionClient {
     try {
       const params = new URLSearchParams({
         token,
+        model_id: ELEVENLABS_REALTIME_MODEL,
+        audio_format: "pcm_16000",
         language_code: options.languageCode || "ja",
-        diarize: String(options.enableDiarization ?? true),
         include_timestamps: "true",
         commit_strategy: "vad", // Voice Activity Detection による自動コミット
         ...(options.vad && {
-          vad_silence_threshold_secs: String(options.vad.silenceThresholdSecs ?? 0.5),
-          vad_min_speech_duration_secs: String(options.vad.minSpeechDurationSecs ?? 0.25),
+          vad_silence_threshold_secs: String(
+            options.vad.silenceThresholdSecs ?? 0.5,
+          ),
+          min_speech_duration_ms: String(
+            options.vad.minSpeechDurationMs ?? 250,
+          ),
         }),
       });
 
       const url = `${ELEVENLABS_REALTIME_ENDPOINT}?${params}`;
 
       console.log("[RealtimeClient] Connecting to WebSocket...");
-      this.ws = new WebSocket(url);
+      const ws = new WebSocket(url);
+      this.ws = ws;
 
-      // Promise で接続完了を待つ
+      // ElevenLabs が設定を受理した session_started まで待つ。
       await new Promise<void>((resolve, reject) => {
+        let settled = false;
         const timeout = setTimeout(() => {
-          reject(new Error("WebSocket connection timeout"));
+          if (settled) return;
+          settled = true;
+          reject(new Error("Realtime session start timeout"));
         }, 10000); // 10秒でタイムアウト
 
-        this.ws!.onopen = () => {
+        const resolveSession = () => {
+          if (settled) return;
+          settled = true;
           clearTimeout(timeout);
-          console.log("[RealtimeClient] WebSocket connected");
-          this.isConnecting = false;
-          this.emit("session_started", {});
           resolve();
         };
 
-        this.ws!.onerror = (error) => {
+        const rejectSession = (error: Error) => {
+          if (settled) return;
+          settled = true;
           clearTimeout(timeout);
-          console.error("[RealtimeClient] WebSocket error:", error);
-          this.isConnecting = false;
-          this.emit("error", { message: "WebSocket connection failed" });
           reject(error);
         };
 
-        this.ws!.onmessage = (event) => {
+        ws.onopen = () => {
+          console.log("[RealtimeClient] WebSocket connected");
+        };
+
+        ws.onerror = () => {
+          const error = new Error("WebSocket connection failed");
+          console.error("[RealtimeClient] WebSocket error");
+          this.isConnecting = false;
+          this.emit("error", { message: error.message });
+          rejectSession(error);
+        };
+
+        ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data) as RealtimeMessage;
+            const messageType = getMessageType(message);
+            if (messageType === "session_started") {
+              this.isConnecting = false;
+              this.emit("session_started", message);
+              resolveSession();
+              return;
+            }
+
             this.handleMessage(message);
+            if (isErrorMessageType(messageType)) {
+              rejectSession(new Error(getErrorMessage(message)));
+            }
           } catch (error) {
-            console.error("[RealtimeClient] Failed to parse message:", error);
-            this.emit("error", { message: "サーバーから不正なメッセージを受信しました" });
+            const parseError = new Error(
+              "サーバーから不正なメッセージを受信しました",
+            );
+            console.error("[RealtimeClient] Failed to parse message");
+            this.emit("error", { message: parseError.message });
+            rejectSession(parseError);
           }
         };
 
-        this.ws!.onclose = () => {
+        ws.onclose = () => {
           console.log("[RealtimeClient] WebSocket closed");
           this.isConnecting = false;
+          if (this.ws === ws) {
+            this.ws = null;
+          }
+          if (!settled) {
+            rejectSession(
+              new Error("Realtime transcription connection closed"),
+            );
+            return;
+          }
           this.emit("close", {});
         };
       });
     } catch (error) {
       this.isConnecting = false;
+      const ws = this.ws;
+      this.ws = null;
+      ws?.close();
       throw error;
     }
   }
@@ -127,9 +210,15 @@ export class RealtimeTranscriptionClient {
    * @param sampleRate - サンプルレート（Hz）
    * @param commit - この音声チャンクでコミットするか（手動コミットモードの場合）
    */
-  sendAudioChunk(audioBase64: string, sampleRate: number = 16000, commit: boolean = false): void {
+  sendAudioChunk(
+    audioBase64: string,
+    sampleRate: number = 16000,
+    commit: boolean = false,
+  ): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn("[RealtimeClient] WebSocket not connected, cannot send audio chunk");
+      console.warn(
+        "[RealtimeClient] WebSocket not connected, cannot send audio chunk",
+      );
       return;
     }
 
@@ -166,12 +255,13 @@ export class RealtimeTranscriptionClient {
    * WebSocket接続を切断
    */
   disconnect(): void {
-    if (this.ws) {
-      console.log("[RealtimeClient] Disconnecting WebSocket");
-      this.ws.close();
-      this.ws = null;
-    }
+    const ws = this.ws;
+    this.ws = null;
     this.eventHandlers.clear();
+    if (ws) {
+      console.log("[RealtimeClient] Disconnecting WebSocket");
+      ws.close();
+    }
     this.isConnecting = false;
   }
 
@@ -207,9 +297,17 @@ export class RealtimeTranscriptionClient {
    * @param message - 受信したメッセージ
    */
   private handleMessage(message: RealtimeMessage): void {
-    // ElevenLabsは message_type を使用する
-    const messageType = (message as any).message_type || message.type;
-    console.log("[RealtimeClient] Received message:", messageType, JSON.stringify(message).substring(0, 200));
+    const messageType = getMessageType(message);
+    console.log("[RealtimeClient] Received message:", messageType);
+
+    if (isErrorMessageType(messageType)) {
+      console.error("[RealtimeClient] Server error:", messageType);
+      this.emit("error", {
+        code: messageType,
+        message: getErrorMessage(message),
+      });
+      return;
+    }
 
     switch (messageType) {
       case "session_started":
@@ -237,18 +335,8 @@ export class RealtimeTranscriptionClient {
         break;
       }
 
-      case "error": {
-        const data = message as ErrorMessage;
-        console.error("[RealtimeClient] Server error:", data.code, data.message);
-        this.emit("error", {
-          code: data.code,
-          message: data.message,
-        });
-        break;
-      }
-
       default:
-        console.warn("[RealtimeClient] Unknown message type:", message.type);
+        console.warn("[RealtimeClient] Unknown message type:", messageType);
     }
   }
 

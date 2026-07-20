@@ -8,14 +8,12 @@
 export interface RealtimeOptions {
   /** 言語コード（ISO 639-1形式） */
   languageCode?: string;
-  /** 話者分離（diarization）を有効化 */
-  enableDiarization?: boolean;
   /** Voice Activity Detection設定 */
   vad?: {
     /** 沈黙判定時間（秒） */
     silenceThresholdSecs?: number;
-    /** 最小音声継続時間（秒） */
-    minSpeechDurationSecs?: number;
+    /** 最小音声継続時間（ミリ秒） */
+    minSpeechDurationMs?: number;
   };
   /** 内部マイクストリーミングをスキップ（外部から音声を送信する場合） */
   skipAudioStreaming?: boolean;
@@ -54,7 +52,7 @@ export interface RealtimeTranscriptionState {
   /** 文字起こしセグメントのリスト */
   segments: TranscriptSegment[];
   /** WebSocket接続状態 */
-  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
+  connectionStatus: "disconnected" | "connecting" | "connected" | "error";
   /** エラーメッセージ */
   error?: string;
 }
@@ -64,8 +62,7 @@ export interface RealtimeTranscriptionState {
  */
 export interface RealtimeMessage {
   /** メッセージタイプ（ElevenLabsは message_type を使用） */
-  message_type?: 'session_started' | 'partial_transcript' | 'committed_transcript' |
-        'committed_transcript_with_timestamps' | 'error';
+  message_type?: string;
   /** 旧フィールド名（互換性のため） */
   type?: string;
   /** メッセージデータ */
@@ -76,7 +73,7 @@ export interface RealtimeMessage {
  * Partial Transcriptメッセージ
  */
 export interface PartialTranscriptMessage extends RealtimeMessage {
-  type: 'partial_transcript';
+  type: "partial_transcript";
   /** 部分的な文字起こしテキスト */
   text: string;
 }
@@ -85,7 +82,7 @@ export interface PartialTranscriptMessage extends RealtimeMessage {
  * Committed Transcriptメッセージ
  */
 export interface CommittedTranscriptMessage extends RealtimeMessage {
-  type: 'committed_transcript';
+  type: "committed_transcript";
   /** 確定した文字起こしテキスト */
   text: string;
 }
@@ -94,7 +91,7 @@ export interface CommittedTranscriptMessage extends RealtimeMessage {
  * Committed Transcript with Timestampsメッセージ
  */
 export interface CommittedTranscriptWithTimestampsMessage extends RealtimeMessage {
-  type: 'committed_transcript_with_timestamps';
+  type: "committed_transcript_with_timestamps";
   /** 確定した文字起こしテキスト */
   text: string;
   /** 単語レベルの情報 */
@@ -110,22 +107,20 @@ export interface CommittedTranscriptWithTimestampsMessage extends RealtimeMessag
  * エラーメッセージ
  */
 export interface ErrorMessage extends RealtimeMessage {
-  type: 'error';
-  /** エラーコード */
-  code: string;
+  message_type: string;
   /** エラーメッセージ */
-  message: string;
+  error: string;
 }
 
 /**
  * 翻訳ステータス
  */
-export type TranslationStatus = 'pending' | 'completed' | 'error';
+export type TranslationStatus = "pending" | "completed" | "error";
 
 /**
  * 翻訳対応言語
  */
-export type TargetLanguage = 'ja' | 'en';
+export type TargetLanguage = "ja" | "en";
 
 /**
  * 翻訳設定

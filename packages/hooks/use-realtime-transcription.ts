@@ -7,9 +7,10 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Alert } from "react-native";
-import { trpc } from "@/packages/lib/trpc";
+import { API_BASE_URL } from "@/packages/lib/api";
 import { RealtimeTranscriptionClient } from "@/packages/lib/realtime-transcription";
-import { applyPartial, applyCommitted, mergeSegments } from "@/packages/lib/transcript-segments";
+import { requestRealtimeToken } from "@/packages/lib/realtime-token";
+import { applyPartial, applyCommitted, applyTimestampedCommitted, mergeSegments } from "@/packages/lib/transcript-segments";
 import { createAudioStream, type AudioStreamController, type AudioStreamResult } from "@/packages/platform";
 import type {
   TranscriptSegment,
@@ -50,9 +51,6 @@ export function useRealtimeTranscription() {
   const recordingStartTimeRef = useRef<number>(0);
   const currentRecordingIdRef = useRef<string | null>(null);
   const audioStreamRef = useRef<AudioStreamController | null>(null);
-
-  // tRPC mutation for generating realtime token
-  const generateTokenMutation = trpc.ai.generateRealtimeToken.useMutation();
 
   // クリーンアップ
   useEffect(() => {
@@ -149,10 +147,9 @@ export function useRealtimeTranscription() {
       }));
 
       currentRecordingIdRef.current = recordingId;
-      recordingStartTimeRef.current = Date.now();
+      recordingStartTimeRef.current = 0;
 
-      const tokenResult = await generateTokenMutation.mutateAsync();
-      const token = tokenResult.token;
+      const token = await requestRealtimeToken(API_BASE_URL);
 
       // WebSocketクライアント初期化
       const client = new RealtimeTranscriptionClient();
@@ -160,6 +157,7 @@ export function useRealtimeTranscription() {
 
       // イベントハンドラ設定
       client.on("session_started", () => {
+        recordingStartTimeRef.current = Date.now();
         setState((prev) => ({
           ...prev,
           connectionStatus: "connected",
@@ -211,7 +209,7 @@ export function useRealtimeTranscription() {
         const speakerId = data.words.find((w) => w.speaker_id)?.speaker_id;
 
         setState((prev) => {
-          const { segments, segment } = applyCommitted(
+          const { segments, segment } = applyTimestampedCommitted(
             prev.segments,
             data.text,
             timestamp,
@@ -234,7 +232,7 @@ export function useRealtimeTranscription() {
           error: error.message || "接続エラーが発生しました",
         }));
 
-        if (error.code === "QUOTA_EXCEEDED") {
+        if (error.code === "quota_exceeded") {
           Alert.alert(
             "クォータ超過",
             "文字起こしクォータに達しました。録音は継続できますが、リアルタイム文字起こしは無効化されます。"
@@ -253,10 +251,9 @@ export function useRealtimeTranscription() {
       // WebSocket接続
       const connectionOptions: RealtimeOptions = {
         languageCode: options.languageCode || "ja",
-        enableDiarization: options.enableDiarization ?? true,
         vad: options.vad || {
           silenceThresholdSecs: 0.5,
-          minSpeechDurationSecs: 0.25,
+          minSpeechDurationMs: 250,
         },
       };
 
@@ -282,7 +279,7 @@ export function useRealtimeTranscription() {
 
       throw error;
     }
-  }, [startAudioStreaming, generateTokenMutation]);
+  }, [startAudioStreaming]);
 
   /**
    * セッションを停止

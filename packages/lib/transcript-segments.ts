@@ -54,9 +54,8 @@ export function applyPartial(
  * committed（確定結果）を反映する。
  *
  * 優先順位:
- * 1. 直前が同テキストのcommitted → 話者情報のみ更新（timestampsイベントの二重適用対策）
- * 2. 直前がpartial → テキストが異なっても in-place で確定に変換（ID維持）
- * 3. それ以外 → 新規committedを追加
+ * 1. 直前がpartial → テキストが異なっても in-place で確定に変換（ID維持）
+ * 2. それ以外 → 新規committedを追加
  *
  * @param speaker 話者ID（diarization。未指定なら既存値を維持）
  */
@@ -69,16 +68,7 @@ export function applyCommitted(
 ): SegmentUpdate {
   const last = segments[segments.length - 1];
 
-  // 1. 直前が同テキストのcommitted: 二重追加を防ぎ話者情報のみ更新
-  if (last && !last.isPartial && last.text === text) {
-    const segment: TranscriptSegment = {
-      ...last,
-      speaker: speaker ?? last.speaker,
-    };
-    return { segments: [...segments.slice(0, -1), segment], segment };
-  }
-
-  // 2. 直前がpartial: テキストが変化していても in-place で確定化（ID維持）
+  // 1. 直前がpartial: テキストが変化していても in-place で確定化（ID維持）
   if (last?.isPartial) {
     const segment: TranscriptSegment = {
       ...last,
@@ -90,7 +80,7 @@ export function applyCommitted(
     return { segments: [...segments.slice(0, -1), segment], segment };
   }
 
-  // 3. 新規committed
+  // 2. 新規committed
   const segment: TranscriptSegment = {
     id: idGen(),
     text,
@@ -99,6 +89,28 @@ export function applyCommitted(
     speaker,
   };
   return { segments: [...segments, segment], segment };
+}
+
+/**
+ * committed_transcript の直後に届く timestamps 版を同じセグメントへ反映する。
+ */
+export function applyTimestampedCommitted(
+  segments: TranscriptSegment[],
+  text: string,
+  timestamp: number,
+  speaker: string | undefined,
+  idGen: IdGenerator,
+): SegmentUpdate {
+  const last = segments[segments.length - 1];
+  if (last && !last.isPartial && last.text === text) {
+    const segment: TranscriptSegment = {
+      ...last,
+      speaker: speaker ?? last.speaker,
+    };
+    return { segments: [...segments.slice(0, -1), segment], segment };
+  }
+
+  return applyCommitted(segments, text, timestamp, speaker, idGen);
 }
 
 /**
