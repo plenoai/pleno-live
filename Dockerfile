@@ -4,6 +4,7 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 
 # Install pnpm and dependencies
 RUN npm install -g pnpm && \
