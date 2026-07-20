@@ -3,6 +3,7 @@ import type { TranscriptSegment } from "../../../packages/types/realtime-transcr
 import { G2Adapter, type G2ExitReason } from "./g2-adapter";
 import { formatG2Screen, PcmLevelMeter } from "./glasses-view";
 import { LifecycleFence } from "./lifecycle-fence";
+import { archiveSnapshot } from "./session-history";
 import { clearG2Session, loadG2Session, saveG2Session } from "./session-store";
 import { createRealtimeTokenProvider } from "./token-provider";
 import {
@@ -23,7 +24,6 @@ const EMPTY_SNAPSHOT: TranscriptionSnapshot = {
 
 const START_ERROR = "文字起こしを開始できませんでした";
 const CONNECTION_ERROR = "文字起こしの接続が切れました";
-const FINALIZE_ERROR = "文字起こしを確定できませんでした";
 const G2_CONNECTION_ERROR = "G2 に接続できませんでした";
 
 const restored = loadG2Session();
@@ -144,26 +144,23 @@ function persist(shouldResume: boolean, allowAfterExit = false): void {
   }
 }
 
-function archiveCurrentSession(): void {
+function archiveCurrentSession(): boolean {
   const snapshot = transcription.getSnapshot();
-  if (snapshot.segments.length > 0 || sessionCapturedAudio) {
-    const offsetSeconds = elapsedBaseMs / 1_000;
-    historySegments = [
-      ...historySegments,
-      ...snapshot.segments.map((segment) => ({
-        ...segment,
-        isPartial: false,
-        timestamp: segment.timestamp + offsetSeconds,
-      })),
-    ];
-    elapsedBaseMs += snapshot.elapsedMs;
-  }
+  const archived = archiveSnapshot(
+    historySegments,
+    elapsedBaseMs,
+    snapshot,
+    sessionCapturedAudio,
+  );
+  historySegments = archived.segments;
+  elapsedBaseMs = archived.elapsedMs;
 
   ignoreSessionSnapshots = true;
   transcription.stop();
   ignoreSessionSnapshots = false;
   latestSnapshot = EMPTY_SNAPSHOT;
   sessionCapturedAudio = false;
+  return archived.providerFailed;
 }
 
 function onAudio(pcm: Uint8Array): void {
@@ -287,21 +284,11 @@ async function pauseListening(generation: number): Promise<void> {
   const microphoneClosed = await closeMicrophone();
   if (!isOperationActive(generation)) return;
 
-  let finalizeError: unknown;
-  try {
-    await transcription.finalize();
-  } catch (error) {
-    finalizeError = error;
-  } finally {
-    if (isOperationActive(generation)) {
-      archiveCurrentSession();
-    }
-  }
-  if (!isOperationActive(generation)) return;
+  const providerFailed = archiveCurrentSession();
 
-  if (finalizeError || !microphoneClosed) {
-    lastError = finalizeError
-      ? FINALIZE_ERROR
+  if (providerFailed || !microphoneClosed) {
+    lastError = providerFailed
+      ? CONNECTION_ERROR
       : "G2 マイクを停止できませんでした";
     uiState = "error";
     errorRecovery = "pause";

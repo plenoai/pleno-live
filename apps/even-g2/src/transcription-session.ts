@@ -30,7 +30,6 @@ export interface TranscriptionSnapshot {
 
 export interface TranscriptionClient {
   connect(token: string, options?: RealtimeOptions): Promise<void>;
-  commit(): void;
   disconnect(): void;
   sendAudioChunk(audioBase64: string, sampleRate?: number): void;
   on(event: RealtimeEvent, handler: (data: unknown) => void): void;
@@ -97,13 +96,6 @@ export class TranscriptionSession {
   private endedAtMs: number | undefined;
   private sessionVersion = 0;
   private idSequence = 0;
-  private finalizeWaiter: {
-    client: TranscriptionClient;
-    version: number;
-    timer: ReturnType<typeof setTimeout>;
-    resolve: () => void;
-    reject: (error: Error) => void;
-  } | null = null;
 
   constructor(options: TranscriptionSessionOptions) {
     this.tokenProvider = options.tokenProvider;
@@ -123,7 +115,6 @@ export class TranscriptionSession {
   }
 
   async start(options: RealtimeOptions = {}): Promise<void> {
-    this.finishFinalize();
     const previousClient = this.client;
     this.client = null;
     previousClient?.disconnect();
@@ -193,43 +184,7 @@ export class TranscriptionSession {
     return true;
   }
 
-  async finalize(timeoutMs = 5_000): Promise<void> {
-    const client = this.client;
-    const version = this.sessionVersion;
-    if (
-      this.currentStatus !== "connected" ||
-      !client?.isConnected ||
-      timeoutMs < 0
-    ) {
-      return;
-    }
-
-    this.finishFinalize();
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(
-        () =>
-          this.finishFinalize(
-            client,
-            version,
-            new Error("Realtime commit timed out"),
-          ),
-        timeoutMs,
-      );
-      this.finalizeWaiter = { client, version, timer, resolve, reject };
-      try {
-        client.commit();
-      } catch (cause) {
-        if (this.finalizeWaiter?.client === client) {
-          this.finalizeWaiter = null;
-          clearTimeout(timer);
-        }
-        reject(toError(cause, "Failed to finalize realtime transcription"));
-      }
-    });
-  }
-
   stop(): void {
-    this.finishFinalize();
     const client = this.client;
     if (this.currentStatus === "disconnected" && client === null) {
       return;
@@ -312,7 +267,6 @@ export class TranscriptionSession {
       }
 
       this.applyCommittedText(text);
-      this.finishFinalize(client, version);
     });
 
     client.on("committedWithTimestamps", (data) => {
@@ -338,7 +292,6 @@ export class TranscriptionSession {
         this.idGenerator,
       ).segments;
       this.emitSnapshot();
-      this.finishFinalize(client, version);
     });
 
     client.on("error", (data) => {
@@ -393,7 +346,6 @@ export class TranscriptionSession {
   }
 
   private fail(error: Error, client?: TranscriptionClient): void {
-    this.finishFinalize(client, undefined, error);
     const alreadyReported =
       this.currentStatus === "error" && this.errorMessage === error.message;
 
@@ -434,28 +386,5 @@ export class TranscriptionSession {
 
   private emitSnapshot(): void {
     this.onSnapshot?.(this.getSnapshot());
-  }
-
-  private finishFinalize(
-    client?: TranscriptionClient,
-    version?: number,
-    error?: Error,
-  ): void {
-    const waiter = this.finalizeWaiter;
-    if (
-      !waiter ||
-      (client && waiter.client !== client) ||
-      (version !== undefined && waiter.version !== version)
-    ) {
-      return;
-    }
-
-    this.finalizeWaiter = null;
-    clearTimeout(waiter.timer);
-    if (error) {
-      waiter.reject(error);
-    } else {
-      waiter.resolve();
-    }
   }
 }

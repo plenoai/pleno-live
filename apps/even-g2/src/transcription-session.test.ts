@@ -16,7 +16,6 @@ class FakeTranscriptionClient implements TranscriptionClient {
   readonly sentAudio: Array<{ base64: string; sampleRate?: number }> = [];
   readonly handlers = new Map<RealtimeEvent, (data: unknown) => void>();
   disconnectCalls = 0;
-  commitCalls = 0;
   connected = false;
 
   get isConnected(): boolean {
@@ -32,10 +31,6 @@ class FakeTranscriptionClient implements TranscriptionClient {
   disconnect(): void {
     this.disconnectCalls += 1;
     this.connected = false;
-  }
-
-  commit(): void {
-    this.commitCalls += 1;
   }
 
   sendAudioChunk(base64: string, sampleRate?: number): void {
@@ -201,6 +196,22 @@ describe("TranscriptionSession", () => {
     expect(harness.errors).toHaveLength(1);
   });
 
+  it("surfaces provider errors with their original message", async () => {
+    const harness = createHarness();
+    await harness.session.start();
+
+    harness.client.emit("error", { message: "Invalid audio chunk" });
+
+    expect(harness.session.getSnapshot()).toMatchObject({
+      status: "error",
+      error: "Invalid audio chunk",
+    });
+    expect(harness.client.disconnectCalls).toBe(1);
+    expect(harness.errors.map((error) => error.message)).toEqual([
+      "Invalid audio chunk",
+    ]);
+  });
+
   it("stops intentionally without reporting a disconnect error", async () => {
     const harness = createHarness();
     await harness.session.start();
@@ -216,42 +227,6 @@ describe("TranscriptionSession", () => {
     expect(harness.client.disconnectCalls).toBe(1);
     expect(harness.errors).toEqual([]);
     expect(harness.session.sendPcm(new Uint8Array([1]))).toBe(false);
-  });
-
-  it("commits pending audio before a caller stops the session", async () => {
-    const harness = createHarness();
-    await harness.session.start();
-
-    const finalizing = harness.session.finalize();
-    expect(harness.client.commitCalls).toBe(1);
-    harness.client.emit("committed", { text: "final words" });
-    await finalizing;
-
-    expect(harness.session.getSnapshot().finalText).toBe("final words");
-  });
-
-  it("rejects finalize when the provider rejects the explicit commit", async () => {
-    const harness = createHarness();
-    await harness.session.start();
-
-    const finalizing = harness.session.finalize();
-    harness.client.emit("error", { message: "Commit throttled" });
-
-    await expect(finalizing).rejects.toThrow("Commit throttled");
-    expect(harness.session.getSnapshot()).toMatchObject({
-      status: "error",
-      error: "Commit throttled",
-    });
-  });
-
-  it("rejects finalize when no committed transcript arrives before timeout", async () => {
-    const harness = createHarness();
-    await harness.session.start();
-
-    const finalizing = harness.session.finalize(0);
-
-    expect(harness.client.commitCalls).toBe(1);
-    await expect(finalizing).rejects.toThrow("Realtime commit timed out");
   });
 
   it("surfaces token failures without constructing a client", async () => {

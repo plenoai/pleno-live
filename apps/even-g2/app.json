@@ -2,7 +2,7 @@
   "package_id": "com.plenoai.plenoliveg2",
   "edition": "202601",
   "name": "Pleno Live",
-  "version": "1.14.0",
+  "version": "1.14.1",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.12",
   "entrypoint": "index.html",

@@ -208,13 +208,8 @@ export class RealtimeTranscriptionClient {
    *
    * @param audioBase64 - Base64エンコードされた音声データ
    * @param sampleRate - サンプルレート（Hz）
-   * @param commit - この音声チャンクでコミットするか（手動コミットモードの場合）
    */
-  sendAudioChunk(
-    audioBase64: string,
-    sampleRate: number = 16000,
-    commit: boolean = false,
-  ): void {
+  sendAudioChunk(audioBase64: string, sampleRate: number = 16000): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       console.warn(
         "[RealtimeClient] WebSocket not connected, cannot send audio chunk",
@@ -227,25 +222,6 @@ export class RealtimeTranscriptionClient {
       message_type: "input_audio_chunk",
       audio_base_64: audioBase64,
       sample_rate: sampleRate,
-      commit,
-    };
-
-    this.ws.send(JSON.stringify(message));
-  }
-
-  /**
-   * 手動コミット（手動コミットモードの場合に使用）
-   */
-  commit(): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn("[RealtimeClient] WebSocket not connected, cannot commit");
-      return;
-    }
-
-    // ElevenLabs Realtime API の正しいメッセージフォーマット
-    const message = {
-      message_type: "input_audio_chunk",
-      commit: true,
     };
 
     this.ws.send(JSON.stringify(message));

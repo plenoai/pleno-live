@@ -79,7 +79,7 @@ describe("RealtimeTranscriptionClient", () => {
     expect(client.isConnected).toBe(true);
   });
 
-  it("sends an explicit commit and surfaces typed server errors", async () => {
+  it("sends VAD audio without a manual commit and surfaces typed server errors", async () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -93,10 +93,11 @@ describe("RealtimeTranscriptionClient", () => {
     socket.receive({ message_type: "session_started" });
     await connecting;
 
-    client.commit();
+    client.sendAudioChunk("AAEC/w==", 16_000);
     expect(JSON.parse(socket.sent[0])).toEqual({
       message_type: "input_audio_chunk",
-      commit: true,
+      audio_base_64: "AAEC/w==",
+      sample_rate: 16_000,
     });
 
     socket.receive({
@@ -106,6 +107,15 @@ describe("RealtimeTranscriptionClient", () => {
     expect(errors).toContainEqual({
       code: "rate_limited",
       message: "Please retry",
+    });
+
+    socket.receive({
+      message_type: "input_error",
+      error: "Invalid audio chunk",
+    });
+    expect(errors).toContainEqual({
+      code: "input_error",
+      message: "Invalid audio chunk",
     });
   });
 
