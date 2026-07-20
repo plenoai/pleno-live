@@ -1,5 +1,5 @@
-import Markdown from "@ronradtke/react-native-markdown-display";
-import { View, type StyleSheet as RNStyleSheet, type ViewStyle } from "react-native";
+import Markdown, { type MarkdownStyleMap } from "@ronradtke/react-native-markdown-display";
+import { View, type ViewStyle } from "react-native";
 
 import { useColors } from "@/packages/hooks/use-colors";
 
@@ -18,7 +18,7 @@ export function MarkdownText({
 }: MarkdownTextProps) {
   const colors = useColors();
 
-  const styles: RNStyleSheet.NamedStyles<Record<string, object>> = {
+  const styles: MarkdownStyleMap = {
     body: {
       color: colors.foreground,
       fontSize,
@@ -93,3 +93,4 @@ export function MarkdownText({
     </View>
   );
 }
+
