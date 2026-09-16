@@ -18,6 +18,20 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 2
+    # Expo SDK が互換バージョンを管理するパッケージは Dependabot で上げない。
+    # 個別に semver で上げると `expo install --check`（CI）が壊れるため、
+    # 更新は `pnpm exec expo install --fix` で一括して行う。
+    ignore:
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "@expo/*"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "@react-native/*"
+      - dependency-name: "@react-native-community/*"
+      - dependency-name: "@types/react"
     groups:
       npm-minor-patch:
         patterns:
