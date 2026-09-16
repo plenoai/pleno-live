@@ -33,10 +33,9 @@ updates:
       - dependency-name: "@react-native-community/*"
       - dependency-name: "@types/react"
       - dependency-name: "eslint-config-expo"
-      # minor/patch グループに major (vite 6 → 8) が混入していたため上限を明示
+      # vite は package.json の pnpm.overrides 経由で semver 判定を迂回し
+      # minor/patch グループに major (6 → 8) が混入するため丸ごと除外する
       - dependency-name: "vite"
-        update-types:
-          - "version-update:semver-major"
     groups:
       npm-minor-patch:
         patterns:
