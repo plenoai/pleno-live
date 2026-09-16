@@ -1,5 +1,6 @@
 import { ENV } from "./env";
 import { getGoogleAccessToken } from "./google-auth";
+import { TEXT_MODEL, VERTEX_LOCATION, vertexHost } from "./models";
 
 type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -208,8 +209,8 @@ const normalizeToolChoice = (
 // aiplatform.googleapis.com (Vertex AI) を使用することで
 // Google Cloud DPA が適用され、データの学習利用が禁止される
 const resolveApiUrl = () => {
-  const { gcpProjectId, gcpRegion } = ENV;
-  return `https://${gcpRegion}-aiplatform.googleapis.com/v1beta1/projects/${gcpProjectId}/locations/${gcpRegion}/endpoints/openapi/chat/completions`;
+  const { gcpProjectId } = ENV;
+  return `https://${vertexHost()}/v1beta1/projects/${gcpProjectId}/locations/${VERTEX_LOCATION}/endpoints/openapi/chat/completions`;
 };
 
 const assertCredentials = () => {
@@ -278,7 +279,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   // Vertex AI はモデル名に "google/" プレフィックスが必要
   const model = params.model
     ? params.model.startsWith("google/") ? params.model : `google/${params.model}`
-    : "google/gemini-2.5-flash-lite";
+    : `google/${TEXT_MODEL}`;
 
   const payload: Record<string, unknown> = {
     model,
