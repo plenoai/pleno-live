@@ -74,7 +74,7 @@
     "expo-updates": "~56.0.26",
     "expo-video": "~56.1.4",
     "express": "^4.22.1",
-    "framer-motion": "^12.42.2",
+    "framer-motion": "^13.2.0",
     "jose": "6.2.3",
     "lucide-react": "^1.25.0",
     "mysql2": "^3.23.1",
