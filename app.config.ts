@@ -116,6 +116,7 @@ const config: ExpoConfig = {
         },
       },
     ],
+    "./plugins/withIosPodDeploymentTarget",
   ],
   experiments: {
     typedRoutes: true,
