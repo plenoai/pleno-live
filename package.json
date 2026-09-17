@@ -128,7 +128,8 @@
       "vite": ">=6.0.0"
     },
     "patchedDependencies": {
-      "@mykin-ai/expo-audio-stream": "patches/@mykin-ai__expo-audio-stream.patch"
+      "@mykin-ai/expo-audio-stream": "patches/@mykin-ai__expo-audio-stream.patch",
+      "expo-modules-jsi@56.0.13": "patches/expo-modules-jsi@56.0.13.patch"
     }
   }
 }

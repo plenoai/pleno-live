@@ -1,0 +1,20 @@
+diff --git a/apple/scripts/build-xcframework.sh b/apple/scripts/build-xcframework.sh
+--- a/apple/scripts/build-xcframework.sh
++++ b/apple/scripts/build-xcframework.sh
+@@ -201,6 +201,8 @@ build_slice() {
+   fi
+ 
++  # Do not use -quiet: nested Swift builds can emit an error with exit code 0,
++  # causing the parent Xcode archive to fail even when this framework builds.
+   (cd "$PACKAGE_DIR" && env -i "${env_args[@]}" \
+     xcodebuild \
+     build \
+     -scheme "$PACKAGE_NAME" \
+@@ -208,7 +210,6 @@ build_slice() {
+     -destination "generic/platform=${destination}" \
+     -derivedDataPath "$DERIVED_DATA_PATH" \
+     -configuration "$CONFIGURATION" \
+-    -quiet \
+     -disableAutomaticPackageResolution \
+     -skipPackagePluginValidation \
+     -skipMacroValidation \
