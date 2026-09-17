@@ -5,5 +5,4 @@ export const ENV = {
   // base64 エンコードされたサービスアカウント JSON
   googleCredentials: process.env.GOOGLE_CREDENTIALS ?? "",
   gcpProjectId: process.env.GCP_PROJECT_ID ?? "",
-  gcpRegion: process.env.GCP_REGION ?? "us-central1",
 };
