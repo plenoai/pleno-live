@@ -82,7 +82,6 @@
     "react-native-web": "~0.21.2",
     "serverless-http": "^4.0.0",
     "superjson": "^2.2.6",
-    "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
