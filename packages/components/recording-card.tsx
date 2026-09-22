@@ -1,19 +1,14 @@
 import React, { useRef, useCallback } from "react";
 import {
-  Text,
-  View,
-  TouchableOpacity,
-  StyleSheet,
   Alert,
+  Animated,
+  PanResponder,
   Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import Reanimated, {
-  useAnimatedStyle,
-  interpolate,
-  Extrapolation,
-  type SharedValue,
-} from "react-native-reanimated";
 
 import { Haptics } from "@/packages/platform";
 import { IconSymbol } from "@/packages/components/ui/icon-symbol";
@@ -65,42 +60,84 @@ function getStatusInfo(status: Recording["status"]): { text: string; variant: St
   }
 }
 
-function DeleteActionView({
-  progress,
-  dragX,
+const ACTION_WIDTH = 80;
+
+const shouldSwipe = (_: unknown, g: { dx: number; dy: number }) =>
+  Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy);
+
+function SwipeActions({
+  title,
   onDelete,
   errorColor,
+  children,
 }: {
-  progress: SharedValue<number>;
-  dragX: SharedValue<number>;
+  title: string;
   onDelete: () => void;
   errorColor: string;
+  children: React.ReactNode;
 }) {
-  const animStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [0, 1]),
-    transform: [
-      {
-        translateX: interpolate(
-          dragX.value,
-          [-80, 0],
-          [0, 80],
-          Extrapolation.CLAMP
-        ),
+  const translateX = useRef(new Animated.Value(0)).current;
+  const openRef = useRef(false);
+
+  const animate = useCallback(
+    (toValue: number) => {
+      openRef.current = toValue < 0;
+      Animated.spring(translateX, { toValue, useNativeDriver: true }).start();
+    },
+    [translateX]
+  );
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: shouldSwipe,
+      onMoveShouldSetPanResponderCapture: shouldSwipe,
+      onPanResponderMove: (_, g) => {
+        const base = openRef.current ? -ACTION_WIDTH : 0;
+        translateX.setValue(Math.max(-ACTION_WIDTH, Math.min(0, base + g.dx)));
       },
-    ],
-  }));
+      onPanResponderRelease: (_, g) => {
+        const base = openRef.current ? -ACTION_WIDTH : 0;
+        animate(base + g.dx < -ACTION_WIDTH / 2 ? -ACTION_WIDTH : 0);
+      },
+      onPanResponderTerminate: () =>
+        animate(openRef.current ? -ACTION_WIDTH : 0),
+    })
+  ).current;
+
+  const handleDelete = useCallback(() => {
+    Haptics.impact("medium");
+    Alert.alert("削除確認", "「" + title + "」を削除しますか？", [
+      { text: "キャンセル", style: "cancel", onPress: () => animate(0) },
+      {
+        text: "削除",
+        style: "destructive",
+        onPress: () => {
+          animate(0);
+          onDelete();
+        },
+      },
+    ]);
+  }, [title, onDelete, animate]);
 
   return (
-    <Reanimated.View style={[styles.deleteAction, animStyle]}>
-      <TouchableOpacity
-        style={[styles.deleteButton, { backgroundColor: errorColor }]}
-        onPress={onDelete}
-        activeOpacity={0.8}
+    <View style={styles.swipeRow}>
+      <View style={styles.deleteAction}>
+        <TouchableOpacity
+          style={[styles.deleteButton, { backgroundColor: errorColor }]}
+          onPress={handleDelete}
+          activeOpacity={0.8}
+        >
+          <IconSymbol name="trash.fill" size={22} color="#FFFFFF" />
+          <Text style={styles.deleteText}>削除</Text>
+        </TouchableOpacity>
+      </View>
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={{ transform: [{ translateX }] }}
       >
-        <IconSymbol name="trash.fill" size={22} color="#FFFFFF" />
-        <Text style={styles.deleteText}>削除</Text>
-      </TouchableOpacity>
-    </Reanimated.View>
+        {children}
+      </Animated.View>
+    </View>
   );
 }
 
@@ -125,7 +162,6 @@ export const RecordingCard = React.memo(function RecordingCard({
 }: RecordingCardProps) {
   const colors = useColors();
   const statusInfo = getStatusInfo(recording.status);
-  const swipeableRef = useRef<React.ComponentRef<typeof Swipeable>>(null);
 
   const handleLongPress = useCallback(() => {
     if (isSelectMode) return;
@@ -144,26 +180,6 @@ export const RecordingCard = React.memo(function RecordingCard({
       onPress();
     }
   }, [isSelectMode, onToggleSelection, onPress]);
-
-  const handleDelete = useCallback(() => {
-    Haptics.impact('medium');
-    Alert.alert("削除確認", `「${recording.title}」を削除しますか？`, [
-      { text: "キャンセル", style: "cancel", onPress: () => swipeableRef.current?.close() },
-      { text: "削除", style: "destructive", onPress: onDelete },
-    ]);
-  }, [recording.title, onDelete]);
-
-  const renderRightActions = useCallback(
-    (progress: SharedValue<number>, dragX: SharedValue<number>) => (
-      <DeleteActionView
-        progress={progress}
-        dragX={dragX}
-        onDelete={handleDelete}
-        errorColor={colors.error}
-      />
-    ),
-    [handleDelete, colors.error]
-  );
 
   const cardContent = (
     <Card
@@ -268,15 +284,9 @@ export const RecordingCard = React.memo(function RecordingCard({
   }
 
   return (
-    <Swipeable
-      ref={swipeableRef}
-      renderRightActions={renderRightActions}
-      rightThreshold={40}
-      overshootRight={false}
-      friction={2}
-    >
+    <SwipeActions title={recording.title} onDelete={onDelete} errorColor={colors.error}>
       {cardContent}
-    </Swipeable>
+    </SwipeActions>
   );
 }, (prevProps, nextProps) => {
   return (
@@ -352,10 +362,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 18,
   },
+  swipeRow: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 8,
+  },
   deleteAction: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: ACTION_WIDTH,
     justifyContent: "center",
-    alignItems: "flex-end",
-    marginBottom: 12,
+    alignItems: "center",
   },
   deleteButton: {
     justifyContent: "center",

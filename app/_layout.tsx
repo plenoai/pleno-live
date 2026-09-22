@@ -3,9 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "react-native-reanimated";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
 import "@/packages/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/packages/lib/theme-provider";
 import {
@@ -117,17 +115,17 @@ function AppLayout() {
 
   // ウェブのランディングページではAppProvidersをスキップ（音声許可を求めない）
   const content = isWebLanding ? (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       {stack}
       <StatusBar style="dark" />
-    </GestureHandlerRootView>
+    </View>
   ) : (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       <AppProviders>
         {stack}
         <StatusBar style="auto" />
       </AppProviders>
-    </GestureHandlerRootView>
+    </View>
   );
 
   const shouldOverrideSafeArea = Platform.OS === "web";
