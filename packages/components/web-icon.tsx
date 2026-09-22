@@ -1,8 +1,4 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-
-import type { ComponentProps } from "react";
-
-type MaterialIconName = ComponentProps<typeof MaterialIcons>["name"];
+import { MaterialIcons, type MaterialIconName } from "./ui/material-icons";
 
 /** Web landing/legal pages用のアイコン。アプリ本体と同じMaterialIconsを使い、追加依存を増やさない。 */
 export function WebIcon({
