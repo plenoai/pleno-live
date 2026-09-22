@@ -1,12 +1,11 @@
 "use client";
 
 import { Link } from "expo-router";
-import { motion } from "framer-motion";
 import { WebIcon } from "@/packages/components/web-icon";
 import { useState, useEffect } from "react";
 import { cn } from "@/packages/lib/cn";
 
-// Hook to detect client-side mount for hydration-safe animations
+// Hydration-safe client detection (SSR placeholder + animated shapes)
 function useIsClient() {
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
@@ -14,6 +13,7 @@ function useIsClient() {
   }, []);
   return isClient;
 }
+
 
 function ElegantShape({
   className,
@@ -31,40 +31,19 @@ function ElegantShape({
   gradient?: string;
 }) {
   return (
-    <motion.div
-      initial={{
-        opacity: 0,
-        y: -150,
-        rotate: rotate - 15,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-        rotate: rotate,
-      }}
-      transition={{
-        duration: 2.4,
-        delay,
-        ease: [0.23, 0.86, 0.39, 0.96],
-        opacity: { duration: 1.2 },
-      }}
-      className={cn("absolute", className)}
-    >
-      <motion.div
-        animate={{
-          y: [0, 15, 0],
-        }}
-        transition={{
-          duration: 12,
-          repeat: Number.POSITIVE_INFINITY,
-          ease: "easeInOut",
-        }}
-        style={{
+    <div
+      className={cn("pl-shape-in absolute", className)}
+      style={
+        {
           width,
           height,
-        }}
-        className="relative"
-      >
+          "--pl-delay": delay + "s",
+          "--pl-rotate": rotate + "deg",
+          "--pl-rotate-from": (rotate - 15) + "deg",
+        } as React.CSSProperties
+      }
+    >
+      <div className="pl-float relative" style={{ width, height }}>
         <div
           className={cn(
             "absolute inset-0 rounded-full",
@@ -74,8 +53,8 @@ function ElegantShape({
             "shadow-[0_8px_32px_0_rgba(99,102,241,0.1)]"
           )}
         />
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
@@ -177,19 +156,6 @@ function VoiceMemoLanding() {
   const isClient = useIsClient();
   const [isRecording, setIsRecording] = useState(false);
 
-  const fadeUpVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.8,
-        delay: 0.2 + i * 0.15,
-        ease: [0.25, 0.4, 0.25, 1] as const,
-      },
-    }),
-  };
-
   useEffect(() => {
     const interval = setInterval(() => {
       setIsRecording((prev) => !prev);
@@ -284,47 +250,35 @@ function VoiceMemoLanding() {
         <section className="container mx-auto px-6 pt-12 pb-16 md:pt-24 md:pb-24">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
-              <motion.div
-                custom={0}
-                variants={fadeUpVariants}
-                initial={isClient ? "hidden" : false}
-                animate={isClient ? "visible" : false}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-primary/10 mb-8"
+              <div
+                className="pl-fade-up inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-primary/10 mb-8"
+                style={{ "--pl-delay": "0.2s" } as React.CSSProperties}
               >
                 <div className="h-2 w-2 rounded-full bg-primary" />
                 <span className="text-sm text-muted font-medium">
                   AI-Powered Transcription
                 </span>
-              </motion.div>
+              </div>
 
-              <motion.h1
-                custom={1}
-                variants={fadeUpVariants}
-                initial={isClient ? "hidden" : false}
-                animate={isClient ? "visible" : false}
-                className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 tracking-tight text-foreground"
+              <h1
+                className="pl-fade-up text-5xl sm:text-6xl md:text-7xl font-bold mb-6 tracking-tight text-foreground"
+                style={{ "--pl-delay": "0.35s" } as React.CSSProperties}
               >
                 Turn Voice into{" "}
                 <span className="text-primary">Knowledge</span>
-              </motion.h1>
+              </h1>
 
-              <motion.p
-                custom={2}
-                variants={fadeUpVariants}
-                initial={isClient ? "hidden" : false}
-                animate={isClient ? "visible" : false}
-                className="text-lg md:text-xl text-muted mb-10 max-w-2xl mx-auto leading-relaxed"
+              <p
+                className="pl-fade-up text-lg md:text-xl text-muted mb-10 max-w-2xl mx-auto leading-relaxed"
+                style={{ "--pl-delay": "0.5s" } as React.CSSProperties}
               >
                 ボイスメモをAIで瞬時にテキスト化。
                 OSSのリアルタイム文字起こしアプリです。
-              </motion.p>
+              </p>
 
-              <motion.div
-                custom={3}
-                variants={fadeUpVariants}
-                initial={isClient ? "hidden" : false}
-                animate={isClient ? "visible" : false}
-                className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+              <div
+                className="pl-fade-up flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+                style={{ "--pl-delay": "0.65s" } as React.CSSProperties}
               >
                 <a href="https://github.com/plenoai/pleno-live/releases">
                   <Button size="lg">Download App</Button>
@@ -334,14 +288,11 @@ function VoiceMemoLanding() {
                     ブラウザで使う
                   </Button>
                 </Link>
-              </motion.div>
+              </div>
 
-              <motion.div
-                custom={4}
-                variants={fadeUpVariants}
-                initial={isClient ? "hidden" : false}
-                animate={isClient ? "visible" : false}
-                className="max-w-2xl mx-auto"
+              <div
+                className="pl-fade-up max-w-2xl mx-auto"
+                style={{ "--pl-delay": "0.8s" } as React.CSSProperties}
               >
                 <div className="bg-surface border border-border rounded-2xl p-8 shadow-sm">
                   <div className="flex flex-col items-center gap-4">
@@ -355,15 +306,7 @@ function VoiceMemoLanding() {
                       onClick={() => setIsRecording(!isRecording)}
                     >
                       {isRecording ? (
-                        <motion.div
-                          className="w-6 h-6 rounded-sm bg-white"
-                          animate={{ rotate: 360 }}
-                          transition={{
-                            duration: 2,
-                            repeat: Number.POSITIVE_INFINITY,
-                            ease: "linear",
-                          }}
-                        />
+                        <div className="pl-spin w-6 h-6 rounded-sm bg-white" />
                       ) : (
                         <WebIcon name="mic" size={28} className="text-primary" />
                       )}
@@ -378,7 +321,7 @@ function VoiceMemoLanding() {
                     </p>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </div>
         </section>
@@ -386,30 +329,21 @@ function VoiceMemoLanding() {
         {/* Features Section */}
         <section id="features" className="container mx-auto px-6 py-16 md:py-24">
           <div className="max-w-5xl mx-auto">
-            <motion.div
-              initial={isClient ? { opacity: 0, y: 20 } : false}
-              whileInView={isClient ? { opacity: 1, y: 0 } : undefined}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="text-center mb-12"
-            >
+            <div className="pl-fade-up text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
                 Features
               </h2>
               <p className="text-lg text-muted">
                 よりスマートに仕事をこなすための機能を搭載
               </p>
-            </motion.div>
+            </div>
 
             <div className="grid md:grid-cols-3 gap-8">
               {features.map((feature, index) => (
-                <motion.div
+                <div
                   key={index}
-                  initial={isClient ? { opacity: 0, y: 20 } : false}
-                  whileInView={isClient ? { opacity: 1, y: 0 } : undefined}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="bg-surface border border-border rounded-2xl p-8 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+                  className="pl-fade-up bg-surface border border-border rounded-2xl p-8 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+                  style={{ "--pl-delay": (0.1 + index * 0.1) + "s" } as React.CSSProperties}
                 >
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                     <WebIcon name={feature.icon} size={24} className="text-primary" />
@@ -420,7 +354,7 @@ function VoiceMemoLanding() {
                   <p className="text-muted leading-relaxed">
                     {feature.description}
                   </p>
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -428,13 +362,7 @@ function VoiceMemoLanding() {
 
         {/* CTA Section */}
         <section className="container mx-auto px-6 py-16 md:py-24">
-          <motion.div
-            initial={isClient ? { opacity: 0, y: 20 } : false}
-            whileInView={isClient ? { opacity: 1, y: 0 } : undefined}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="max-w-3xl mx-auto text-center"
-          >
+          <div className="pl-fade-up max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Get Started
             </h2>
@@ -451,7 +379,7 @@ function VoiceMemoLanding() {
                 </Button>
               </Link>
             </div>
-          </motion.div>
+          </div>
         </section>
 
         {/* Footer */}

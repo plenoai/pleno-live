@@ -33,3 +33,56 @@
     --color-highlight: #FBBF24;
   }
 }
+
+/* ランディングページのアニメーション（framer-motion を廃止したため CSS で代替） */
+@keyframes pl-shape-in {
+  from {
+    opacity: 0;
+    transform: translateY(-150px) rotate(var(--pl-rotate-from, 0deg));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--pl-rotate, 0deg));
+  }
+}
+.pl-shape-in {
+  animation: pl-shape-in 2.4s cubic-bezier(0.23, 0.86, 0.39, 0.96) both;
+  animation-delay: var(--pl-delay, 0s);
+}
+@keyframes pl-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(15px);
+  }
+}
+.pl-float {
+  animation: pl-float 12s ease-in-out infinite;
+}
+@keyframes pl-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.pl-fade-up {
+  animation: pl-fade-up 0.8s cubic-bezier(0.25, 0.4, 0.25, 1) both;
+  animation-delay: var(--pl-delay, 0s);
+}
+.pl-fade-up-sm {
+  animation: pl-fade-up 0.3s ease-out both;
+}
+@keyframes pl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.pl-spin {
+  animation: pl-spin 2s linear infinite;
+}

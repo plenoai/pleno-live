@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { WebIcon } from "@/packages/components/web-icon";
 
 function Section({
@@ -81,12 +80,7 @@ export default function PrivacyPage() {
 
       {/* Content */}
       <main className="flex-1 max-w-4xl mx-auto px-6 py-12 w-full">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="space-y-12"
-        >
+        <div className="pl-fade-up-sm space-y-12">
           {/* Title */}
           <div className="space-y-4">
             <h1 className="text-3xl font-medium text-foreground">
@@ -251,7 +245,7 @@ export default function PrivacyPage() {
               </span>
             </div>
           </Section>
-        </motion.div>
+        </div>
       </main>
 
       {/* Footer */}
