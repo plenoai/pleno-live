@@ -12,8 +12,10 @@ Usage (after adding an icon):
 Requires: pyftsubset (pip install fonttools)
 """
 
+import io
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -44,15 +46,18 @@ USE_NAMES = [
     "graphic-eq",
     "description",
     "chat",
+    "error",
     "star",
     "delete",
     "share",
     "search",
+    "shield",
     "close",
     "check",
     "add",
     "remove",
     "arrow-back",
+    "bolt",
     "schedule",
     "folder",
     "info",
@@ -72,6 +77,22 @@ USE_NAMES = [
 def main() -> int:
     with open(GLYPHMAP_SRC, encoding="utf-8") as f:
         glyphmap = json.load(f)
+
+    # Regression guard: any material icon name used as a literal `icon: "x"`
+    # in app/packages must be in USE_NAMES.
+    used = sorted({
+        m.group(1)
+        for root in (os.path.join(ROOT, "app"), os.path.join(ROOT, "packages"))
+        for dirpath, _, files in os.walk(root)
+        for fn in files
+        if fn.endswith((".ts", ".tsx", ".js", ".jsx"))
+        for line in io.open(os.path.join(dirpath, fn), encoding="utf-8", errors="ignore")
+        for m in re.finditer(r'icon\s*:\s*"([a-z0-9-]+)"', line)
+    })
+    used_missing = [n for n in used if n in glyphmap and n not in USE_NAMES]
+    if used_missing:
+        print(f"error: used icon names not in USE_NAMES: {used_missing}", file=sys.stderr)
+        return 1
 
     missing = [n for n in USE_NAMES if n not in glyphmap]
     if missing:

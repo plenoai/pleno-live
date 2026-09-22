@@ -1,6 +1,7 @@
 {
   "add": 57669,
   "arrow-back": 58820,
+  "bolt": 59915,
   "calendar-today": 59701,
   "cancel": 58825,
   "chat": 57527,
@@ -11,6 +12,7 @@
   "code": 59503,
   "delete": 59506,
   "description": 59507,
+  "error": 57344,
   "folder": 58055,
   "graphic-eq": 57784,
   "grid-view": 59824,
@@ -29,6 +31,7 @@
   "sentiment-neutral": 59410,
   "settings": 59576,
   "share": 59405,
+  "shield": 59872,
   "star": 59448,
   "stop": 57415,
   "view-list": 59631,
