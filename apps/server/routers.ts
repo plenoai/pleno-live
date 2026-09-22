@@ -1,7 +1,13 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
-import { protectedProcedure, router } from "./_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { invokeLLM, type Message } from "./_core/llm";
+import {
+  REALTIME_TOKEN_FACTORIES,
+  issueRealtimeToken,
+  realtimeTokenLimiter,
+} from "./realtime-token";
 import {
   transcribeAudio,
   transcribeAudioFromUrl,
@@ -1062,6 +1068,28 @@ JSON形式で以下のように出力してください:
           message: `${importedRecordings.length}件の録音メタデータをインポートしました。`,
         };
       }),
+
+    // b11340e 以前にリリースされたクライアントは、トークン発行にこの tRPC 手続きを
+    // 呼ぶ。新規クライアントは REST (/api/even-g2/realtime-token 等) を使うため、
+    // これは旧クライアント（OTA/TestFlight の旧 runtimeVersion）向けの後方互換シム。
+    // ponytail: 旧クライアントのサポート終了後に削除する
+    generateRealtimeToken: publicProcedure.mutation(async ({ ctx }) => {
+      const clientId = ctx.req.socket.remoteAddress || "unknown";
+      const result = await issueRealtimeToken(
+        clientId,
+        realtimeTokenLimiter,
+        REALTIME_TOKEN_FACTORIES.elevenlabs,
+      );
+
+      if (!result.ok) {
+        throw new TRPCError({
+          code: result.status === 429 ? "TOO_MANY_REQUESTS" : "BAD_GATEWAY",
+          message: result.error,
+        });
+      }
+
+      return { token: result.token };
+    }),
   }),
 });
 

@@ -7,13 +7,12 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import {
-  RealtimeTokenRateLimiter,
   REALTIME_TOKEN_FACTORIES,
   issueRealtimeToken,
+  realtimeTokenLimiter,
   type RealtimeTokenProvider,
 } from "../realtime-token";
 
-const realtimeTokenLimiter = new RealtimeTokenRateLimiter();
 // Even G2 グラス向けに公開済みのパス。互換性のため維持している。
 const EVEN_G2_TOKEN_PATH = "/api/even-g2/realtime-token";
 const OPENAI_TOKEN_PATH = "/api/openai/realtime-token";

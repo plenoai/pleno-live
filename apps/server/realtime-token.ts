@@ -59,6 +59,14 @@ export class RealtimeTokenRateLimiter {
 }
 
 /**
+ * プロセス単位で共有するレートリミッタ
+ *
+ * REST エンドポイントと tRPC 後方互換エンドポイントで枠を共有し、
+ * 片方を迂回してレート制限を回避できないようにする。
+ */
+export const realtimeTokenLimiter = new RealtimeTokenRateLimiter();
+
+/**
  * リアルタイム文字起こしのプロバイダ
  */
 export type RealtimeTokenProvider = "elevenlabs" | "openai";
