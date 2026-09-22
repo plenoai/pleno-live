@@ -44,6 +44,18 @@ export const FileSystem: PlatformFileSystem = {
     throw new Error(`File not found: ${uri}`);
   },
 
+  async readAsBase64Range(uri: string, position: number, length: number): Promise<string> {
+    const base64 = await this.readAsBase64(uri);
+    const binary = atob(base64);
+    const bytes = new Uint8Array(Math.min(length, Math.max(0, binary.length - position)));
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = binary.charCodeAt(position + i);
+    }
+    let out = '';
+    for (const b of bytes) out += String.fromCharCode(b);
+    return btoa(out);
+  },
+
   async writeAsBase64(uri: string, base64: string): Promise<void> {
     fileStorage.set(uri, base64);
   },

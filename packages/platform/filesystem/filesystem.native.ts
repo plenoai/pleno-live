@@ -23,6 +23,14 @@ export const FileSystem: PlatformFileSystem = {
     });
   },
 
+  async readAsBase64Range(uri: string, position: number, length: number): Promise<string> {
+    return ExpoFileSystem.readAsStringAsync(uri, {
+      encoding: ExpoFileSystem.EncodingType.Base64,
+      position,
+      length,
+    });
+  },
+
   async writeAsBase64(uri: string, base64: string): Promise<void> {
     await ExpoFileSystem.writeAsStringAsync(uri, base64, {
       encoding: ExpoFileSystem.EncodingType.Base64,

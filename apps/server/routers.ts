@@ -45,6 +45,8 @@ export const appRouter = router({
               ? "audio/webm"
               : input.filename.endsWith(".m4a")
               ? "audio/mp4"
+              : input.filename.endsWith(".wav")
+              ? "audio/wav"
               : "audio/mpeg";
 
             const result = await transcribeAudioWithGemini(input.audioBase64, {

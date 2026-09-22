@@ -3,7 +3,11 @@
  * expo-audio を使用してマイク許可を管理
  */
 
-import { AudioModule, setAudioModeAsync } from 'expo-audio';
+import {
+  AudioModule,
+  requestNotificationPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
 import type { PlatformPermissions, PermissionStatus } from './index';
 
 function mapPermissionStatus(granted: boolean): PermissionStatus {
@@ -31,6 +35,10 @@ export const Permissions: PlatformPermissions = {
       });
 
       const status = await AudioModule.requestRecordingPermissionsAsync();
+      if (status.granted) {
+        // Android 13+: バックグラウンド録音のFGSに必要
+        await requestNotificationPermissionsAsync();
+      }
       return mapPermissionStatus(status.granted);
     } catch {
       return 'denied';
