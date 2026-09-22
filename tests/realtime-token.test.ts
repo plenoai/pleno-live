@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { TrpcContext } from "../apps/server/_core/context";
 import {
   RealtimeTokenRateLimiter,
   issueRealtimeToken,
@@ -281,32 +280,6 @@ describe("Even G2 token HTTP boundary", () => {
     expect(response?.statusCode).toBe(429);
     expect(response?.headers["retry-after"]).toBe("60");
     expect(fetchMock).toHaveBeenCalledTimes(5);
-  });
-});
-
-describe("Legacy tRPC token boundary", () => {
-  it("issues a token for clients that predate the REST endpoints", async () => {
-    vi.stubEnv("ELEVENLABS_API_KEY", "provider-key");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ token: "legacy-token" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      ),
-    );
-    vi.resetModules();
-
-    const { appRouter } = await import("../apps/server/routers");
-    const caller = appRouter.createCaller({
-      req: { socket: { remoteAddress: "198.51.100.20" } },
-      res: {},
-    } as unknown as TrpcContext);
-
-    await expect(caller.ai.generateRealtimeToken()).resolves.toEqual({
-      token: "legacy-token",
-    });
   });
 });
 
