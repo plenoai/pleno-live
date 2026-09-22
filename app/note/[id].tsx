@@ -295,7 +295,12 @@ export default function NoteDetailScreen() {
         if (!recording.audioUri) {
           throw new Error("音声ファイルが見つかりません");
         }
-        const { AudioContext } = await import("react-native-audio-api");
+        // 深いパス import で AudioControls（gesture-handler/reanimated 依存のUI）を除外
+        const AudioContext = (
+          (await import(
+            "react-native-audio-api/lib/module/core/AudioContext.js" as string
+          )) as { default: typeof import("react-native-audio-api").AudioContext }
+        ).default;
         const audioContext = new AudioContext();
         const response = await fetch(recording.audioUri);
         const arrayBuffer = await response.arrayBuffer();
