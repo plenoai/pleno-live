@@ -31,7 +31,7 @@ describe("callMutation", () => {
       },
     ]);
 
-    const result = await callMutation<{ texts: string[] }, { at: Date }>(
+    const result = await callMutation<{ texts: string[] }, { text: string; at: Date }>(
       "ai.translate",
       { texts: ["x"] },
     );
