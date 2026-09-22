@@ -1,14 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  Mic,
-  ArrowLeft,
-  FileText,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { WebIcon } from "@/packages/components/web-icon";
 
 function Section({
   title,
@@ -37,30 +30,30 @@ function HighlightBox({
       bg: "bg-blue-100 dark:bg-blue-900/30",
       border: "border-blue-200 dark:border-blue-800",
       text: "text-blue-800 dark:text-blue-200",
-      icon: AlertCircle,
+      icon: "error",
     },
     warning: {
       bg: "bg-amber-100 dark:bg-amber-900/30",
       border: "border-amber-200 dark:border-amber-800",
       text: "text-amber-800 dark:text-amber-200",
-      icon: AlertCircle,
+      icon: "error",
     },
     success: {
       bg: "bg-green-100 dark:bg-green-900/30",
       border: "border-green-200 dark:border-green-800",
       text: "text-green-800 dark:text-green-200",
-      icon: CheckCircle,
+      icon: "check-circle",
     },
   };
 
   const style = styles[type];
-  const Icon = style.icon;
+  const icon = style.icon;
 
   return (
     <div
       className={`rounded-lg ${style.bg} border ${style.border} p-4 flex items-start gap-3`}
     >
-      <Icon className={`h-5 w-5 ${style.text} flex-shrink-0 mt-0.5`} />
+      <WebIcon name={icon} size={20} className={`h-5 w-5 ${style.text} flex-shrink-0 mt-0.5`} />
       <div className={`${style.text} text-sm`}>{children}</div>
     </div>
   );
@@ -76,9 +69,9 @@ function ListItem({
   return (
     <li className="flex items-start gap-3">
       {allowed ? (
-        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+        <WebIcon name="check-circle" size={20} className="text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
       ) : (
-        <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+        <WebIcon name="cancel" size={20} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
       )}
       <span>{children}</span>
     </li>
@@ -96,7 +89,7 @@ export default function TermsPage() {
           <div className="flex items-center justify-between">
             <a href="/pleno-live/" className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-                <Mic className="w-4 h-4 text-white" />
+                <WebIcon name="mic" size={16} className="text-white" />
               </div>
               <span className="font-medium text-foreground">
                 Pleno Live
@@ -116,7 +109,7 @@ export default function TermsPage() {
                 href="/pleno-live/"
                 className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <WebIcon name="arrow-back" size={16} />
                 <span>ホームに戻る</span>
               </a>
             </div>
@@ -141,7 +134,7 @@ export default function TermsPage() {
           {/* Introduction */}
           <div className="rounded-xl border border-border bg-surface p-6">
             <div className="flex items-start gap-4">
-              <FileText className="h-6 w-6 text-foreground flex-shrink-0" />
+              <WebIcon name="description" size={24} className="text-foreground flex-shrink-0" />
               <p className="text-muted">
                 本利用規約（以下「本規約」）は、Pleno
                 Transcribe（以下「本アプリ」）の利用条件を定めるものです。

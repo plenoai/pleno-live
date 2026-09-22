@@ -2,7 +2,7 @@
 
 import { Link } from "expo-router";
 import { motion } from "framer-motion";
-import { Mic, Zap, Shield } from "lucide-react";
+import { WebIcon } from "@/packages/components/web-icon";
 import { useState, useEffect } from "react";
 import { cn } from "@/packages/lib/cn";
 
@@ -156,18 +156,18 @@ function Button({
 
 const features = [
   {
-    icon: Zap,
+    icon: "bolt",
     title: "Instant Launch",
     description:
       "アプリを開いてすぐに録音開始。待ち時間なしで素早くメモを取れます",
   },
   {
-    icon: Mic,
+    icon: "mic",
     title: "Realtime STT",
     description: "Scribe v2 Realtime SSTによるリアルタイム文字起こしと話者分離",
   },
   {
-    icon: Shield,
+    icon: "shield",
     title: "Local & Private",
     description: "全てはこの端末上に保存。運営会社のサーバーには送信されず、AIモデルの学習にも使用されません",
   },
@@ -249,7 +249,7 @@ function VoiceMemoLanding() {
           <nav className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Mic className="w-5 h-5 text-white" />
+                <WebIcon name="mic" size={20} className="text-white" />
               </div>
               <span className="text-xl font-semibold text-foreground">
                 Pleno Live
@@ -365,7 +365,7 @@ function VoiceMemoLanding() {
                           }}
                         />
                       ) : (
-                        <Mic className="w-7 h-7 text-primary" />
+                        <WebIcon name="mic" size={28} className="text-primary" />
                       )}
                     </button>
 
@@ -412,7 +412,7 @@ function VoiceMemoLanding() {
                   className="bg-surface border border-border rounded-2xl p-8 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
                 >
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                    <feature.icon className="w-6 h-6 text-primary" />
+                    <WebIcon name={feature.icon} size={24} className="text-primary" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
                     {feature.title}
@@ -459,7 +459,7 @@ function VoiceMemoLanding() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-                <Mic className="w-4 h-4 text-white" />
+                <WebIcon name="mic" size={16} className="text-white" />
               </div>
               <span className="text-sm font-medium text-foreground">
                 Pleno Live

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Mic, ArrowLeft, Lock, Eye, Database, Trash2, Mail } from "lucide-react";
+import { WebIcon } from "@/packages/components/web-icon";
 
 function Section({
   title,
@@ -19,18 +19,18 @@ function Section({
 }
 
 function InfoCard({
-  icon: Icon,
+  icon,
   title,
   description,
 }: {
-  icon: React.ElementType;
+  icon: string;
   title: string;
   description: string;
 }) {
   return (
     <div className="flex items-start gap-4 p-4 rounded-lg bg-surface border border-border">
       <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-background border border-border flex-shrink-0">
-        <Icon className="h-5 w-5 text-foreground" />
+        <WebIcon name={icon} size={20} className="text-foreground" />
       </div>
       <div>
         <h3 className="font-medium text-foreground mb-1">{title}</h3>
@@ -51,7 +51,7 @@ export default function PrivacyPage() {
           <div className="flex items-center justify-between">
             <a href="/pleno-live/" className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-                <Mic className="w-4 h-4 text-white" />
+                <WebIcon name="mic" size={16} className="text-white" />
               </div>
               <span className="font-medium text-foreground">
                 Pleno Live
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
                 href="/pleno-live/"
                 className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <WebIcon name="arrow-back" size={16} />
                 <span>ホームに戻る</span>
               </a>
             </div>
@@ -107,22 +107,22 @@ export default function PrivacyPage() {
           {/* Key Points */}
           <div className="grid gap-4 md:grid-cols-2">
             <InfoCard
-              icon={Lock}
+              icon="lock"
               title="端末内完結"
               description="録音データと文字起こしデータはすべて端末内に保存され、運営会社のサーバーへの送信は行いません。"
             />
             <InfoCard
-              icon={Eye}
+              icon="visibility"
               title="透明性"
               description="収集するデータの種類と目的を明確に開示しています。"
             />
             <InfoCard
-              icon={Database}
+              icon="storage"
               title="最小限のデータ"
               description="機能の提供に必要な最小限のデータのみを収集します。"
             />
             <InfoCard
-              icon={Trash2}
+              icon="delete"
               title="完全な削除"
               description="アプリのアンインストール時にすべてのデータが削除されます。"
             />
@@ -236,7 +236,7 @@ export default function PrivacyPage() {
               プライバシーに関するご質問やご懸念がある場合は、以下の方法でお問い合わせください：
             </p>
             <div className="flex items-center gap-2 mt-4 p-4 rounded-lg bg-surface border border-border">
-              <Mail className="h-5 w-5 text-muted" />
+              <WebIcon name="mail" size={20} className="text-muted" />
               <span>
                 GitHubの
                 <a
