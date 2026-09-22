@@ -31,7 +31,11 @@
     "even:g2:check": "tsc --project apps/even-g2/tsconfig.json --noEmit",
     "even:g2:build": "pnpm even:g2:check && vite build --config apps/even-g2/vite.config.ts",
     "even:g2:pack": "pnpm even:g2:build && mkdir -p dist && rm -f dist/pleno-live-g2.ehpk && evenhub pack apps/even-g2/app.json apps/even-g2/dist -o dist/pleno-live-g2.ehpk && test -s dist/pleno-live-g2.ehpk",
-    "even:g2:simulate": "evenhub-simulator http://localhost:5174"
+    "even:g2:simulate": "evenhub-simulator http://localhost:5174",
+    "storybook:generate": "sb-rn-get-stories",
+    "predev": "pnpm storybook:generate",
+    "predev:metro": "pnpm storybook:generate",
+    "prestorybook": "pnpm storybook:generate"
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "0.0.12",
