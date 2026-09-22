@@ -25,6 +25,9 @@ const config: ExpoConfig = {
     eas: {
       projectId: "a4f0e87b-1f9a-48d7-a813-94d61f5bc29a",
     },
+    router: {
+      asyncRoutes: true,
+    },
   },
   updates: {
     url: "https://u.expo.dev/a4f0e87b-1f9a-48d7-a813-94d61f5bc29a",
