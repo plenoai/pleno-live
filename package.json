@@ -69,7 +69,7 @@
     "expo-task-manager": "~56.0.27",
     "expo-updates": "~56.0.27",
     "express": "^4.22.1",
-    "framer-motion": "^12.42.2",
+    "framer-motion": "^13.4.0",
     "jose": "6.2.3",
     "mysql2": "^3.23.1",
     "nativewind": "^4.2.6",
