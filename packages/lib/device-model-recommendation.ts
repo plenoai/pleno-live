@@ -5,7 +5,7 @@
  * 最適なモデルサイズを提案する
  */
 
-import * as Device from "expo-device";
+
 import { Platform } from "react-native";
 
 export type ModelTier = "tiny" | "base" | "small";
@@ -24,6 +24,7 @@ export interface ModelRecommendation {
 async function getDeviceRamMB(): Promise<number | undefined> {
   if (Platform.OS === "web") return undefined;
   try {
+    const Device = await import("expo-device");
     const totalMemory = await Device.getMaxMemoryAsync();
     if (totalMemory && totalMemory > 0) {
       return totalMemory / (1024 * 1024); // bytes → MB

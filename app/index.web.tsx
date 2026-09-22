@@ -3,7 +3,7 @@
 import { Link } from "expo-router";
 import { WebIcon } from "@/packages/components/web-icon";
 import { useState, useEffect } from "react";
-import { cn } from "@/packages/lib/cn";
+import { cn } from "@/packages/lib/utils";
 
 // Hydration-safe client detection (SSR placeholder + animated shapes)
 function useIsClient() {
