@@ -1,5 +1,4 @@
 import "@/global.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -14,7 +13,6 @@ import {
 } from "react-native-safe-area-context";
 import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
-import { trpc, createTRPCClient } from "@/packages/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/packages/lib/_core/manus-runtime";
 import { RecordingsProvider } from "@/packages/lib/recordings-context";
 import { LanguageProvider } from "@/packages/lib/i18n/context";
@@ -23,29 +21,12 @@ import { SettingsProvider } from "@/packages/lib/settings-context";
 const STORYBOOK_ENABLED = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
 
 function AppProviders({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            refetchOnWindowFocus: false,
-            retry: 1,
-          },
-        },
-      }),
-  );
-  const [trpcClient] = useState(() => createTRPCClient());
-
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <SettingsProvider>
-          <LanguageProvider>
-            <RecordingsProvider>{children}</RecordingsProvider>
-          </LanguageProvider>
-        </SettingsProvider>
-      </QueryClientProvider>
-    </trpc.Provider>
+    <SettingsProvider>
+      <LanguageProvider>
+        <RecordingsProvider>{children}</RecordingsProvider>
+      </LanguageProvider>
+    </SettingsProvider>
   );
 }
 
@@ -60,7 +41,7 @@ export const unstable_settings = {
 const StorybookUI = STORYBOOK_ENABLED ? require("../.rnstorybook").default : null;
 
 function AppLayout() {
-  // ウェブでもAppProvidersを常に使用（tRPCコンテキストが必要なため）
+  // ウェブでもAppProvidersを常に使用
   const isWebLanding = false;
 
   // Use fixed initial values to avoid hydration mismatch (SSR vs client)
