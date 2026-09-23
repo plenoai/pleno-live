@@ -21,7 +21,7 @@ packages/
   types/           # Type definitions
   constants/       # Constants
   platform/        # OS抽象化レイヤー (後述)
-  infra/           # Terraform IaC
+  infra/           # CodeBuild runner イメージ (AWS/GCP の IaC は iac-aws / iac-gcp で管理)
 ```
 
 ## Tech Stack
