@@ -207,12 +207,12 @@ export function useRealtimeTranscription() {
 
       client.on("committedWithTimestamps", (data: {
         text: string;
-        words: Array<{ text: string; start: number; end: number; speaker_id?: string }>;
+        words?: Array<{ text: string; start: number; end: number; speaker_id?: string }>;
       }) => {
         const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
 
-        // 話者情報を抽出
-        const speakerId = data.words.find((w) => w.speaker_id)?.speaker_id;
+        // 話者情報を抽出（words が欠落しているケースがある）
+        const speakerId = data.words?.find((w) => w.speaker_id)?.speaker_id;
 
         setState((prev) => {
           const { segments, segment } = applyTimestampedCommitted(

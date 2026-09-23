@@ -53,7 +53,61 @@ interface RecordingSessionContextValue {
 
 const RecordingSessionContext = createContext<RecordingSessionContextValue | null>(null);
 
+// expo-audio の useAudioRecorder はレンダー中に AudioRecorder を生成するため、
+// Activity が利用不可のタイミング（起動直後・復帰時の再生成）ではコンストラクタが
+// 同期例外を投げてアプリ全体が落ちる。短い間隔で再マウントして吸収する。
+const RECORDER_INIT_MAX_RETRIES = 5;
+const RECORDER_INIT_RETRY_MS = 1000;
+
+interface RecorderInitBoundaryState {
+  error: Error | null;
+  retryKey: number;
+  retryCount: number;
+}
+
+class RecorderInitBoundary extends React.Component<
+  { children: React.ReactNode },
+  RecorderInitBoundaryState
+> {
+  state: RecorderInitBoundaryState = { error: null, retryKey: 0, retryCount: 0 };
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('[RecordingSession] recorder init failed:', error);
+    if (this.state.retryCount < RECORDER_INIT_MAX_RETRIES) {
+      this.retryTimer = setTimeout(() => {
+        this.setState((s) => ({
+          error: null,
+          retryKey: s.retryKey + 1,
+          retryCount: s.retryCount + 1,
+        }));
+      }, RECORDER_INIT_RETRY_MS);
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+  }
+
+  render() {
+    if (this.state.error) return null;
+    return <React.Fragment key={this.state.retryKey}>{this.props.children}</React.Fragment>;
+  }
+}
+
 export function RecordingSessionProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <RecorderInitBoundary>
+      <RecordingSessionProviderInner>{children}</RecordingSessionProviderInner>
+    </RecorderInitBoundary>
+  );
+}
+
+function RecordingSessionProviderInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { addRecording, updateRealtimeTranscript, setTranscript } = useRecordings();
   const { settings } = useSettingsSafe();
@@ -337,7 +391,8 @@ export function RecordingSessionProvider({ children }: { children: React.ReactNo
         }
       }
       isStartingRef.current = false;
-    } catch {
+    } catch (e) {
+      console.error('startRecording failed:', e);
       isStartingRef.current = false;
       // SystemAudioStreamが開始されていた場合はクリーンアップ
       if (systemAudioStreamRef.current) {

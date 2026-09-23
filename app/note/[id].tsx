@@ -17,6 +17,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { ScreenContainer } from "@/packages/components/screen-container";
 import { Haptics, FileSystem } from "@/packages/platform";
+import { splitWavBase64 } from "@/packages/lib/wav-chunks";
 import { IconSymbol } from "@/packages/components/ui/icon-symbol";
 import { MarkdownText } from "@/packages/components/ui/markdown-text";
 import { useRecordings } from "@/packages/lib/recordings-context";
@@ -323,25 +324,43 @@ export default function NoteDetailScreen() {
       // whisper-local is handled separately, fallback to gemini for API call
       const apiProvider = settings.transcriptionProvider === "whisper-local" ? "gemini" : settings.transcriptionProvider;
 
-      const result = await transcribeMutation.mutateAsync({
-        audioBase64,
-        filename,
-        languageCode: "ja",
-        diarize: settings.transcriptionProvider === "elevenlabs",
-        provider: apiProvider,
-      });
+      // WAV でアップロード上限（同期リクエスト ~6MB）を超える場合は
+      // 小さな WAV に分割して逐次送信する
+      const chunks = filename.endsWith(".wav")
+        ? splitWavBase64(audioBase64) ?? [audioBase64]
+        : [audioBase64];
 
-      if (result.text) {
+      let combinedText = "";
+      let languageCode: string | undefined;
+      for (const chunkBase64 of chunks) {
+        const chunkResult = await transcribeMutation.mutateAsync({
+          audioBase64: chunkBase64,
+          filename,
+          languageCode: "ja",
+          diarize: settings.transcriptionProvider === "elevenlabs",
+          provider: apiProvider,
+        });
+        if (chunkResult.text) {
+          combinedText += (combinedText ? "\n" : "") + chunkResult.text;
+        }
+        languageCode ??= chunkResult.languageCode;
+      }
+
+      if (combinedText) {
         setTranscript(recording.id, {
-          text: result.text,
+          text: combinedText,
           segments: [],
-          language: result.languageCode || "ja",
+          language: languageCode || "ja",
           processedAt: new Date(),
         });
       }
     } catch (error) {
       console.error("Transcription error:", error);
-      const errorMessage = error instanceof Error ? error.message : "文字起こしに失敗しました";
+      const rawMessage = error instanceof Error ? error.message : "";
+      // tRPC が返せないHTTPエラー（413等）は変換失敗メッセージになるため読みやすく
+      const errorMessage = /transform response/i.test(rawMessage)
+        ? "サーバーがリクエストを拒否しました（音声データが大きすぎる可能性があります）"
+        : rawMessage || "文字起こしに失敗しました";
       // Show error to user via alert or state
       if (Platform.OS !== "web") {
         const { Alert } = await import("react-native");

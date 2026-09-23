@@ -1,0 +1,35 @@
+# Pleno Live dev environment: Node 24 + pnpm, Android emulator for on-device testing.
+initialize: |
+  source ~/.nvm/nvm.sh && nvm install 24
+  corepack enable && corepack prepare pnpm@9.12.0 --activate
+  mkdir -p ~/android-sdk/cmdline-tools
+  curl -sSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdline.zip
+  unzip -q -o /tmp/cmdline.zip -d ~/android-sdk/cmdline-tools
+  rm -rf ~/android-sdk/cmdline-tools/latest
+  mv ~/android-sdk/cmdline-tools/cmdline-tools ~/android-sdk/cmdline-tools/latest
+  yes | ~/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null || true
+  ~/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "emulator" "platforms;android-35" "build-tools;36.0.0" "ndk;27.1.12297006" "system-images;android-35;google_apis;x86_64"
+  echo "ANDROID_HOME=$HOME/android-sdk" >> $ENVRC
+  echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $ENVRC
+  echo "PATH=$HOME/android-sdk/platform-tools:$HOME/android-sdk/emulator:\$PATH" >> $ENVRC
+  ~/android-sdk/cmdline-tools/latest/bin/avdmanager create avd -n Pleno_Pixel -d pixel_7 -k "system-images;android-35;google_apis;x86_64" --force || true
+  sudo -n /usr/sbin/usermod -aG kvm ubuntu || true
+maintenance: |
+  source ~/.nvm/nvm.sh && nvm use 24
+  corepack pnpm install
+  ./node_modules/.bin/sb-rn-get-stories --config-path .rnstorybook
+knowledge:
+  - name: lint
+    contents: |
+      # pnpm lint (expo lint), pnpm check (tsc --noEmit)
+  - name: test
+    contents: |
+      # pnpm test (vitest run)
+  - name: android-emulator
+    contents: |
+      # Start emulator: sg kvm -c '"$HOME/android-sdk/emulator/emulator" -avd Pleno_Pixel -no-snapshot-save -gpu swiftshader_indirect' &
+      # adb needs kvm group: sg kvm -c '"$HOME/android-sdk/platform-tools/adb" -s emulator-5554 ...'
+      # Runtime perms: pm grant com.plenoai.plenolive android.permission.RECORD_AUDIO (+ POST_NOTIFICATIONS, FOREGROUND_SERVICE_MICROPHONE)
+      # Build/install dev APK: ANDROID_HOME=~/android-sdk EXPO_USE_METRO_WORKSPACE_ROOT=1 pnpm expo run:android
+      # Maven Central 429s from this box — use GCS mirror via android/gradle.properties react.exclusiveEnterpriseRepository=https://maven-central.storage-download.googleapis.com/maven2/ and patch node_modules *.gradle repositories (see .agents/skills/testing-pleno-live-android)
+      # Prod backend: put EXPO_PUBLIC_API_URL=https://live.plenoai.com in .env (local: adb reverse tcp:3000 tcp:3000)

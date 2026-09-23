@@ -14,6 +14,7 @@ export interface PlatformFileSystem {
   readonly EncodingType: typeof EncodingType;
 
   readAsBase64(uri: string): Promise<string>;
+  readAsBase64Range(uri: string, position: number, length: number): Promise<string>;
   writeAsBase64(uri: string, base64: string): Promise<void>;
   writeAsString(uri: string, content: string, options?: { encoding?: EncodingType }): Promise<void>;
   moveAsync(from: string, to: string): Promise<void>;

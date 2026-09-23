@@ -151,27 +151,32 @@ export class RealtimeTranscriptionClient implements RealtimeClient {
         };
 
         ws.onmessage = (event) => {
+          let message: RealtimeMessage;
           try {
-            const message = JSON.parse(event.data) as RealtimeMessage;
-            const messageType = getMessageType(message);
-            if (messageType === "session_started") {
-              this.isConnecting = false;
-              this.emit("session_started", message);
-              resolveSession();
-              return;
-            }
-
-            this.handleMessage(message);
-            if (isErrorMessageType(messageType)) {
-              rejectSession(new Error(getErrorMessage(message)));
-            }
-          } catch (error) {
-            const parseError = new Error(
-              "サーバーから不正なメッセージを受信しました",
-            );
+            message = JSON.parse(event.data) as RealtimeMessage;
+          } catch {
             console.error("[RealtimeClient] Failed to parse message");
-            this.emit("error", { message: parseError.message });
-            rejectSession(parseError);
+            this.emit("error", {
+              message: "サーバーから不正なメッセージを受信しました",
+            });
+            return;
+          }
+
+          const messageType = getMessageType(message);
+          if (messageType === "session_started") {
+            this.isConnecting = false;
+            this.emit("session_started", message);
+            resolveSession();
+            return;
+          }
+
+          try {
+            this.handleMessage(message);
+          } catch (error) {
+            console.error("[RealtimeClient] Message handler failed", error);
+          }
+          if (isErrorMessageType(messageType)) {
+            rejectSession(new Error(getErrorMessage(message)));
           }
         };
 

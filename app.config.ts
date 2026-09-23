@@ -88,6 +88,7 @@ const config: ExpoConfig = {
       {
         microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",
         enableBackgroundAudio: true,
+        enableBackgroundRecording: true,
       },
     ],
     "@mykin-ai/expo-audio-stream",
