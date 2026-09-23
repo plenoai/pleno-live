@@ -12,7 +12,7 @@
   },
   "scripts": {
     "dev": "concurrently -k \"pnpm dev:server\" \"pnpm dev:metro\"",
-    "dev:server": "cross-env NODE_ENV=development ALLOWED_ORIGINS=http://localhost:${EXPO_PORT:-8081},http://127.0.0.1:${EXPO_PORT:-8081} tsx watch apps/server/_core/index.ts",
+    "dev:server": "cross-env NODE_ENV=development ALLOWED_ORIGINS=http://localhost:*,http://127.0.0.1:* tsx watch apps/server/_core/index.ts",
     "dev:metro": "cross-env EXPO_USE_METRO_WORKSPACE_ROOT=1 npx expo start --web --port ${EXPO_PORT:-8081}",
     "build": "esbuild apps/server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",

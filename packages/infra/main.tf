@@ -76,7 +76,7 @@ variable "app_hmac_secret" {
 
 variable "allowed_origins" {
   type    = string
-  default = "https://plenoai.com"
+  default = "https://plenoai.com,http://localhost:*,http://127.0.0.1:*"
 }
 
 locals {

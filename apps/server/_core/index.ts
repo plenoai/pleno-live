@@ -12,6 +12,7 @@ import {
   issueRealtimeToken,
   type RealtimeTokenProvider,
 } from "../realtime-token";
+import { isAllowedOrigin } from "./cors";
 
 const realtimeTokenLimiter = new RealtimeTokenRateLimiter();
 // Even G2 グラス向けに公開済みのパス。互換性のため維持している。
@@ -52,7 +53,7 @@ function createApp() {
       res.header("Access-Control-Allow-Headers", "Accept, Content-Type");
     } else {
       res.vary("Origin");
-      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      if (origin && isAllowedOrigin(origin, ALLOWED_ORIGINS)) {
         res.header("Access-Control-Allow-Origin", origin);
         res.header("Access-Control-Allow-Credentials", "true");
       }
