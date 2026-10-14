@@ -41,6 +41,12 @@ variable "elevenlabs_api_key" {
   sensitive = true
 }
 
+variable "even_g2_realtime_token_secret" {
+  type        = string
+  sensitive   = true
+  description = "Bearer token required to mint Even G2 realtime transcription tokens"
+}
+
 variable "gcp_project_id" {
   type        = string
   description = "Google Cloud Project ID (Vertex AI)"
@@ -119,19 +125,20 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      NODE_ENV              = "production"
-      ELEVENLABS_API_KEY    = var.elevenlabs_api_key
-      JWT_SECRET            = var.jwt_secret
-      APP_HMAC_SECRET       = var.app_hmac_secret
-      ALLOWED_ORIGINS       = var.allowed_origins
+      NODE_ENV                      = "production"
+      ELEVENLABS_API_KEY            = var.elevenlabs_api_key
+      EVEN_G2_REALTIME_TOKEN_SECRET = var.even_g2_realtime_token_secret
+      JWT_SECRET                    = var.jwt_secret
+      APP_HMAC_SECRET               = var.app_hmac_secret
+      ALLOWED_ORIGINS               = var.allowed_origins
       # Vertex AI 認証 (Cloud DPA 適用 = データ学習利用禁止)
-      GOOGLE_CREDENTIALS    = var.google_credentials
-      GCP_PROJECT_ID        = var.gcp_project_id
-      GCP_REGION            = var.gcp_region
+      GOOGLE_CREDENTIALS            = var.google_credentials
+      GCP_PROJECT_ID                = var.gcp_project_id
+      GCP_REGION                    = var.gcp_region
       # WebAuthn/Passkey
-      WEBAUTHN_RP_ID        = var.webauthn_rp_id
-      WEBAUTHN_RP_ORIGINS   = var.webauthn_rp_origins
-      WEBAUTHN_TABLE_NAME   = "pleno-live-webauthn-credentials"
+      WEBAUTHN_RP_ID                = var.webauthn_rp_id
+      WEBAUTHN_RP_ORIGINS           = var.webauthn_rp_origins
+      WEBAUTHN_TABLE_NAME           = "pleno-live-webauthn-credentials"
     }
   }
 

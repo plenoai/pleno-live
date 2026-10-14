@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import crypto from "crypto";
 import net from "net";
 import serverless from "serverless-http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -13,6 +14,26 @@ import {
 
 const evenG2TokenLimiter = new EvenG2TokenRateLimiter();
 const EVEN_G2_TOKEN_PATH = "/api/even-g2/realtime-token";
+
+function getEvenG2TokenSecret(): string | undefined {
+  const secret = process.env.EVEN_G2_REALTIME_TOKEN_SECRET?.trim();
+  return secret && secret.length > 0 ? secret : undefined;
+}
+
+function hasValidBearerToken(authorization: string | undefined): boolean {
+  const expectedSecret = getEvenG2TokenSecret();
+  if (!expectedSecret || !authorization?.startsWith("Bearer ")) {
+    return false;
+  }
+
+  const suppliedSecret = authorization.slice("Bearer ".length);
+  const expected = Buffer.from(expectedSecret);
+  const supplied = Buffer.from(suppliedSecret);
+  return (
+    supplied.length === expected.length &&
+    crypto.timingSafeEqual(supplied, expected)
+  );
+}
 
 function createApp() {
   const app = express();
@@ -28,16 +49,19 @@ function createApp() {
     const isEvenG2TokenRequest =
       req.path === EVEN_G2_TOKEN_PATH || req.path === `${EVEN_G2_TOKEN_PATH}/`;
     // Mobile app requests have no origin; web requests must match allowlist
-    if (isEvenG2TokenRequest) {
-      res.header("Access-Control-Allow-Origin", "*");
-      res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
-      res.header("Access-Control-Allow-Headers", "Accept, Content-Type");
-    } else {
-      res.vary("Origin");
-      if (origin && ALLOWED_ORIGINS.includes(origin)) {
-        res.header("Access-Control-Allow-Origin", origin);
+    res.vary("Origin");
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+      if (!isEvenG2TokenRequest) {
         res.header("Access-Control-Allow-Credentials", "true");
       }
+    }
+    if (isEvenG2TokenRequest) {
+      res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.header(
+        "Access-Control-Allow-Headers",
+        "Accept, Content-Type, Authorization",
+      );
     }
     if (!isEvenG2TokenRequest) {
       res.header(
@@ -65,6 +89,16 @@ function createApp() {
       Pragma: "no-cache",
       "X-Content-Type-Options": "nosniff",
     });
+
+    if (!getEvenG2TokenSecret()) {
+      res.status(503).json({ error: "Token service is not configured" });
+      return;
+    }
+
+    if (!hasValidBearerToken(req.headers.authorization)) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
 
     const contentLength = Number(req.headers["content-length"] || 0);
     const bufferedBodyLength = Buffer.isBuffer(req.body) ? req.body.length : 0;

@@ -7,13 +7,17 @@ function normalizeApiBaseUrl(value: string): string {
 export async function requestRealtimeToken(
   apiBaseUrl: string,
   fetchImpl: Fetch = fetch,
+  bearerToken?: string,
 ): Promise<string> {
   const response = await fetchImpl(
     `${normalizeApiBaseUrl(apiBaseUrl)}/api/even-g2/realtime-token`,
     {
       method: "POST",
       credentials: "omit",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
+      },
     },
   );
 
