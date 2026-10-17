@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/nodejs:20 AS build
+FROM public.ecr.aws/lambda/nodejs:24 AS build
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 
@@ -23,7 +23,7 @@ RUN npx esbuild apps/server/_core/index.ts \
     --format=cjs \
     --outfile=dist/index.js
 
-FROM public.ecr.aws/lambda/nodejs:20
+FROM public.ecr.aws/lambda/nodejs:24
 WORKDIR ${LAMBDA_TASK_ROOT}
 COPY --from=build /var/task/dist ./dist
 
