@@ -126,7 +126,8 @@ function createApp() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, timestamp: Date.now() });
+    res.set("Cache-Control", "no-store");
+    res.json({ ok: true, version: process.env.APP_COMMIT || "development", timestamp: Date.now() });
   });
 
   app.use(
