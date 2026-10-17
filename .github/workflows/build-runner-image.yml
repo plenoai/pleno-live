@@ -3,6 +3,7 @@ name: Build Runner Image
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - packages/infra/runner.Dockerfile
 
@@ -12,6 +13,7 @@ permissions:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -37,7 +39,7 @@ jobs:
           IMAGE_TAG=$(git rev-parse --short HEAD)
           docker build \
             -f packages/infra/runner.Dockerfile \
-            -t $IMAGE:$IMAGE_TAG \
+            -t "$IMAGE:$IMAGE_TAG" \
             packages/infra/
-          docker push $IMAGE:$IMAGE_TAG
+          docker push "$IMAGE:$IMAGE_TAG"
           echo "Image pushed: $IMAGE:$IMAGE_TAG"
