@@ -52,3 +52,6 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Check deployment verification and rollback
+        run: python3 -m unittest discover -s scripts -p 'test_deploy_server.py'
