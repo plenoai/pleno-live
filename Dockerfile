@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/nodejs:20
+FROM public.ecr.aws/lambda/nodejs:20 AS build
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 
@@ -22,6 +22,18 @@ RUN npx esbuild apps/server/_core/index.ts \
     --bundle \
     --format=cjs \
     --outfile=dist/index.js
+
+FROM public.ecr.aws/lambda/nodejs:20
+WORKDIR ${LAMBDA_TASK_ROOT}
+COPY --from=build /var/task/dist ./dist
+
+# Start the bundled handler without build dependencies before publishing.
+RUN AWS_LAMBDA_FUNCTION_NAME=build-check node -e \
+    'const { handler } = require("./dist/index.js"); \
+    handler({httpMethod:"GET",path:"/api/health",headers:{}},{}).then(response => { \
+      if(response.statusCode !== 200 || !JSON.parse(response.body).ok) \
+        throw Error("Bundled handler is unhealthy"); \
+    })'
 
 ARG APP_COMMIT=development
 ENV APP_COMMIT=${APP_COMMIT}
