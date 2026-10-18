@@ -13,6 +13,7 @@ import {
   issueRealtimeToken,
   type RealtimeTokenProvider,
 } from "../realtime-token";
+import { isAuthorizedRealtimeTokenRequest } from "../realtime-token-auth";
 import { isAllowedOrigin } from "./cors";
 
 const realtimeTokenLimiter = new RealtimeTokenRateLimiter();
@@ -73,15 +74,13 @@ function createApp() {
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     const tokenProvider = resolveRealtimeTokenProvider(req.path);
-    // Even G2 tokens are minted only for allowlisted web origins. Other
+    // Realtime tokens are minted only for allowlisted web origins. Other
     // token clients (e.g. the mobile app) have no browser origin.
-    const isEvenG2TokenRequest = tokenProvider === "elevenlabs";
-    const isOtherRealtimeTokenRequest =
-      tokenProvider !== null && tokenProvider !== "elevenlabs";
+    const isRealtimeTokenRequest = tokenProvider !== null;
 
     res.vary("Origin");
 
-    if (isEvenG2TokenRequest) {
+    if (isRealtimeTokenRequest) {
       if (origin && isAllowedOrigin(origin, ALLOWED_ORIGINS)) {
         res.header("Access-Control-Allow-Origin", origin);
       }
@@ -90,10 +89,6 @@ function createApp() {
         "Access-Control-Allow-Headers",
         "Accept, Content-Type, Authorization",
       );
-    } else if (isOtherRealtimeTokenRequest) {
-      res.header("Access-Control-Allow-Origin", "*");
-      res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
-      res.header("Access-Control-Allow-Headers", "Accept, Content-Type");
     } else {
       if (origin && isAllowedOrigin(origin, ALLOWED_ORIGINS)) {
         res.header("Access-Control-Allow-Origin", origin);
@@ -155,6 +150,14 @@ function createApp() {
 
     if (!provider) {
       res.status(404).json({ error: "Not found" });
+      return;
+    }
+
+    if (
+      provider === "openai" &&
+      !isAuthorizedRealtimeTokenRequest(req.headers.authorization)
+    ) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 

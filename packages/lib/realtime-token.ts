@@ -19,16 +19,26 @@ export async function requestRealtimeTokenFor(
   fetchImpl: Fetch = fetch,
   bearerToken?: string,
 ): Promise<string> {
-  const path = REALTIME_TOKEN_PATHS[provider] ?? REALTIME_TOKEN_PATHS.elevenlabs;
+  const path =
+    REALTIME_TOKEN_PATHS[provider] ?? REALTIME_TOKEN_PATHS.elevenlabs;
+  const authorizationToken =
+    provider === "openai"
+      ? process.env.EXPO_PUBLIC_REALTIME_TOKEN_AUTH_TOKEN
+      : bearerToken;
 
-  const response = await fetchImpl(`${normalizeApiBaseUrl(apiBaseUrl)}${path}`, {
-    method: "POST",
-    credentials: "omit",
-    headers: {
-      Accept: "application/json",
-      ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
+  const response = await fetchImpl(
+    `${normalizeApiBaseUrl(apiBaseUrl)}${path}`,
+    {
+      method: "POST",
+      credentials: "omit",
+      headers: {
+        Accept: "application/json",
+        ...(authorizationToken
+          ? { Authorization: `Bearer ${authorizationToken}` }
+          : {}),
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     throw new Error(`Token request failed (${response.status})`);

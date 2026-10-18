@@ -4,6 +4,7 @@ import {
   RealtimeTokenRateLimiter,
   issueRealtimeToken,
 } from "../apps/server/realtime-token";
+import { requestRealtimeTokenFor } from "../packages/lib/realtime-token";
 
 type LambdaResponse = {
   statusCode: number;
@@ -353,6 +354,8 @@ describe("OpenAI realtime token HTTP boundary", () => {
   it("issues an ephemeral client secret for a transcription session", async () => {
     vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "test");
     vi.stubEnv("OPENAI_API_KEY", "openai-key");
+    vi.stubEnv("APP_HMAC_SECRET", "app-secret");
+    vi.stubEnv("ALLOWED_ORIGINS", "https://allowed.example");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ value: "ek_secret", expires_at: 1 }), {
         status: 200,
@@ -364,14 +367,20 @@ describe("OpenAI realtime token HTTP boundary", () => {
 
     const { handler } = await import("../apps/server/_core/index");
     const response = (await handler(
-      apiGatewayEvent({ path: "/api/openai/realtime-token" }),
+      apiGatewayEvent({
+        path: "/api/openai/realtime-token",
+        origin: "https://allowed.example",
+        headers: { authorization: "Bearer app-secret" },
+      }),
       {},
     )) as LambdaResponse;
 
     expect(response.statusCode).toBe(200);
     // クライアントには API キーではなく短命のシークレットだけを返す
     expect(JSON.parse(response.body)).toEqual({ token: "ek_secret" });
-    expect(response.headers["access-control-allow-origin"]).toBe("*");
+    expect(response.headers["access-control-allow-origin"]).toBe(
+      "https://allowed.example",
+    );
     expect(response.headers["cache-control"]).toBe("no-store, max-age=0");
 
     const [url, init] = fetchMock.mock.calls[0];
@@ -391,11 +400,14 @@ describe("OpenAI realtime token HTTP boundary", () => {
   it("hides provider failures behind a 502", async () => {
     vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "test");
     vi.stubEnv("OPENAI_API_KEY", "openai-key");
+    vi.stubEnv("APP_HMAC_SECRET", "app-secret");
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        new Response("nope", { status: 401, statusText: "Unauthorized" }),
-      ),
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response("nope", { status: 401, statusText: "Unauthorized" }),
+        ),
     );
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.resetModules();
@@ -405,6 +417,7 @@ describe("OpenAI realtime token HTTP boundary", () => {
       apiGatewayEvent({
         path: "/api/openai/realtime-token",
         sourceIp: "198.51.100.9",
+        headers: { authorization: "Bearer app-secret" },
       }),
       {},
     )) as LambdaResponse;
@@ -414,6 +427,29 @@ describe("OpenAI realtime token HTTP boundary", () => {
       error: "Transcription service unavailable",
     });
     expect(response.body).not.toContain("openai-key");
+  });
+
+  it("rejects unauthenticated requests without calling OpenAI", async () => {
+    vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "test");
+    vi.stubEnv("OPENAI_API_KEY", "openai-key");
+    vi.stubEnv("APP_HMAC_SECRET", "app-secret");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+
+    const { handler } = await import("../apps/server/_core/index");
+    const response = (await handler(
+      apiGatewayEvent({
+        path: "/api/openai/realtime-token",
+        origin: "https://attacker.example",
+      }),
+      {},
+    )) as LambdaResponse;
+
+    expect(response.statusCode).toBe(401);
+    expect(JSON.parse(response.body)).toEqual({ error: "Unauthorized" });
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("rejects request bodies on the OpenAI route too", async () => {
@@ -436,5 +472,66 @@ describe("OpenAI realtime token HTTP boundary", () => {
 
     expect(response.statusCode).toBe(413);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("realtime token client authorization", () => {
+  it("sends the deployment credential when minting an OpenAI token", async () => {
+    vi.stubEnv("EXPO_PUBLIC_REALTIME_TOKEN_AUTH_TOKEN", "deployment-secret");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ token: "ek_secret" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await requestRealtimeTokenFor(
+      "https://api.example.test",
+      "openai",
+      fetchMock,
+    );
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.test/api/openai/realtime-token");
+    expect(init.headers.Authorization).toBe("Bearer deployment-secret");
+  });
+
+  it("keeps the public ElevenLabs token request credential-free", async () => {
+    vi.stubEnv("EXPO_PUBLIC_REALTIME_TOKEN_AUTH_TOKEN", "deployment-secret");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ token: "single-use" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await requestRealtimeTokenFor(
+      "https://api.example.test",
+      "elevenlabs",
+      fetchMock,
+    );
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.test/api/even-g2/realtime-token");
+    expect(init.headers).toEqual({ Accept: "application/json" });
+  });
+
+  it("omits the credential when the OpenAI token is unconfigured", async () => {
+    vi.stubEnv("EXPO_PUBLIC_REALTIME_TOKEN_AUTH_TOKEN", "");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ token: "ek_secret" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await requestRealtimeTokenFor(
+      "https://api.example.test",
+      "openai",
+      fetchMock,
+    );
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers).toEqual({ Accept: "application/json" });
   });
 });
