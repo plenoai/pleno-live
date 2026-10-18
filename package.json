@@ -24,6 +24,7 @@
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "ios:devices": "node scripts/register-ios-device.mjs",
     "qr": "node scripts/generate_qr.mjs",
     "storybook": "cross-env EXPO_PUBLIC_STORYBOOK_ENABLED=true expo start --web",
     "storybook:ios": "cross-env EXPO_PUBLIC_STORYBOOK_ENABLED=true expo run:ios",

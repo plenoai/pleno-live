@@ -67,3 +67,4 @@ run: jq -r '.build.PROFILE.env | to_entries[] | "\(.key)=\(.value)"' eas.json >>
 - Preview APK: `.github/workflows/preview-apk.yml` (main push → prerelease)
 - Release APK: `.github/workflows/release.yml` (version tag `v*` push → 正式リリース)
 - iOS: Xcode Cloud (main push → TestFlight)。`ios/ci_scripts/ci_post_clone.sh` がprebuildを実行。署名はクラウドマネージド、env varsはWorkflow設定側で管理 (eas.jsonのjq読み込み対象外)
+- iOSのArchiveはad-hoc/developmentエクスポートも行うため、Apple Developerチームに登録デバイスが1台以上必要 (0台だと exit 70でTestFlight未配信)。登録・確認は `scripts/register-ios-device.mjs` (ADR 004参照)
