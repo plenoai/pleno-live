@@ -17,13 +17,17 @@ export async function requestRealtimeTokenFor(
   apiBaseUrl: string,
   provider: RealtimeProvider = "elevenlabs",
   fetchImpl: Fetch = fetch,
+  bearerToken?: string,
 ): Promise<string> {
   const path = REALTIME_TOKEN_PATHS[provider] ?? REALTIME_TOKEN_PATHS.elevenlabs;
 
   const response = await fetchImpl(`${normalizeApiBaseUrl(apiBaseUrl)}${path}`, {
     method: "POST",
     credentials: "omit",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
+    },
   });
 
   if (!response.ok) {
@@ -50,6 +54,12 @@ export async function requestRealtimeTokenFor(
 export async function requestRealtimeToken(
   apiBaseUrl: string,
   fetchImpl: Fetch = fetch,
+  bearerToken?: string,
 ): Promise<string> {
-  return requestRealtimeTokenFor(apiBaseUrl, "elevenlabs", fetchImpl);
+  return requestRealtimeTokenFor(
+    apiBaseUrl,
+    "elevenlabs",
+    fetchImpl,
+    bearerToken,
+  );
 }

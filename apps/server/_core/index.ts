@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import crypto from "crypto";
 import net from "net";
 import serverless from "serverless-http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -33,6 +34,33 @@ function resolveRealtimeTokenProvider(
   return REALTIME_TOKEN_PATHS[normalized] ?? null;
 }
 
+/**
+ * Even G2 グラス向けトークン発行に必要な共有シークレット。
+ * 未設定の場合はトークンサービスを提供しない。
+ */
+function getEvenG2TokenSecret(): string | undefined {
+  const secret = process.env.EVEN_G2_REALTIME_TOKEN_SECRET?.trim();
+  return secret && secret.length > 0 ? secret : undefined;
+}
+
+/**
+ * Authorization ヘッダが Even G2 用シークレットと一致するか定数時間で検証する。
+ */
+function hasValidBearerToken(authorization: string | undefined): boolean {
+  const expectedSecret = getEvenG2TokenSecret();
+  if (!expectedSecret || !authorization?.startsWith("Bearer ")) {
+    return false;
+  }
+
+  const suppliedSecret = authorization.slice("Bearer ".length);
+  const expected = Buffer.from(expectedSecret);
+  const supplied = Buffer.from(suppliedSecret);
+  return (
+    supplied.length === expected.length &&
+    crypto.timingSafeEqual(supplied, expected)
+  );
+}
+
 function createApp() {
   const app = express();
 
@@ -44,21 +72,33 @@ function createApp() {
 
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    const isRealtimeTokenRequest =
-      resolveRealtimeTokenProvider(req.path) !== null;
-    // Mobile app requests have no origin; web requests must match allowlist
-    if (isRealtimeTokenRequest) {
+    const tokenProvider = resolveRealtimeTokenProvider(req.path);
+    // Even G2 tokens are minted only for allowlisted web origins. Other
+    // token clients (e.g. the mobile app) have no browser origin.
+    const isEvenG2TokenRequest = tokenProvider === "elevenlabs";
+    const isOtherRealtimeTokenRequest =
+      tokenProvider !== null && tokenProvider !== "elevenlabs";
+
+    res.vary("Origin");
+
+    if (isEvenG2TokenRequest) {
+      if (origin && isAllowedOrigin(origin, ALLOWED_ORIGINS)) {
+        res.header("Access-Control-Allow-Origin", origin);
+      }
+      res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.header(
+        "Access-Control-Allow-Headers",
+        "Accept, Content-Type, Authorization",
+      );
+    } else if (isOtherRealtimeTokenRequest) {
       res.header("Access-Control-Allow-Origin", "*");
       res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
       res.header("Access-Control-Allow-Headers", "Accept, Content-Type");
     } else {
-      res.vary("Origin");
       if (origin && isAllowedOrigin(origin, ALLOWED_ORIGINS)) {
         res.header("Access-Control-Allow-Origin", origin);
         res.header("Access-Control-Allow-Credentials", "true");
       }
-    }
-    if (!isRealtimeTokenRequest) {
       res.header(
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, DELETE, OPTIONS",
@@ -85,6 +125,21 @@ function createApp() {
       "X-Content-Type-Options": "nosniff",
     });
 
+    const provider = resolveRealtimeTokenProvider(req.path);
+
+    // Even G2 realtime tokens are minted only for authenticated callers.
+    if (provider === "elevenlabs") {
+      if (!getEvenG2TokenSecret()) {
+        res.status(503).json({ error: "Token service is not configured" });
+        return;
+      }
+
+      if (!hasValidBearerToken(req.headers.authorization)) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+    }
+
     const contentLength = Number(req.headers["content-length"] || 0);
     const bufferedBodyLength = Buffer.isBuffer(req.body) ? req.body.length : 0;
     if (
@@ -98,7 +153,6 @@ function createApp() {
       return;
     }
 
-    const provider = resolveRealtimeTokenProvider(req.path);
     if (!provider) {
       res.status(404).json({ error: "Not found" });
       return;
