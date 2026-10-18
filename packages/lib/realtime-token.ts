@@ -17,13 +17,14 @@ export async function requestRealtimeTokenFor(
   apiBaseUrl: string,
   provider: RealtimeProvider = "elevenlabs",
   fetchImpl: Fetch = fetch,
+  bearerToken?: string,
 ): Promise<string> {
   const path =
     REALTIME_TOKEN_PATHS[provider] ?? REALTIME_TOKEN_PATHS.elevenlabs;
   const authorizationToken =
     provider === "openai"
       ? process.env.EXPO_PUBLIC_REALTIME_TOKEN_AUTH_TOKEN
-      : undefined;
+      : bearerToken;
 
   const response = await fetchImpl(
     `${normalizeApiBaseUrl(apiBaseUrl)}${path}`,
@@ -63,6 +64,12 @@ export async function requestRealtimeTokenFor(
 export async function requestRealtimeToken(
   apiBaseUrl: string,
   fetchImpl: Fetch = fetch,
+  bearerToken?: string,
 ): Promise<string> {
-  return requestRealtimeTokenFor(apiBaseUrl, "elevenlabs", fetchImpl);
+  return requestRealtimeTokenFor(
+    apiBaseUrl,
+    "elevenlabs",
+    fetchImpl,
+    bearerToken,
+  );
 }

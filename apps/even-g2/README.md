@@ -28,6 +28,8 @@ pnpm even:g2:simulate
 
 Set `VITE_PLENO_API_URL` only when using a non-production API. The origin must also be listed in `app.json` before packaging.
 
+Set `VITE_PLENO_REALTIME_TOKEN_SECRET` to the same bearer secret configured on the API as `EVEN_G2_REALTIME_TOKEN_SECRET`. The API rejects token requests without it.
+
 ## Verification and packaging
 
 ```bash

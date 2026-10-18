@@ -147,10 +147,11 @@ describe("issueRealtimeToken", () => {
 });
 
 describe("Even G2 token HTTP boundary", () => {
-  it("uses credentialless wildcard CORS and disables token caching", async () => {
+  it("requires bearer auth, allowlisted CORS, and disables token caching", async () => {
     vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "test");
     vi.stubEnv("ALLOWED_ORIGINS", "https://allowed.example");
     vi.stubEnv("ELEVENLABS_API_KEY", "provider-key");
+    vi.stubEnv("EVEN_G2_REALTIME_TOKEN_SECRET", "token-secret");
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -163,10 +164,18 @@ describe("Even G2 token HTTP boundary", () => {
     vi.resetModules();
 
     const { handler } = await import("../apps/server/_core/index");
-    const response = (await handler(apiGatewayEvent({}), {})) as LambdaResponse;
+    const response = (await handler(
+      apiGatewayEvent({
+        origin: "https://allowed.example",
+        headers: { authorization: "Bearer token-secret" },
+      }),
+      {},
+    )) as LambdaResponse;
 
     expect(response.statusCode).toBe(200);
-    expect(response.headers["access-control-allow-origin"]).toBe("*");
+    expect(response.headers["access-control-allow-origin"]).toBe(
+      "https://allowed.example",
+    );
     expect(
       response.headers["access-control-allow-credentials"],
     ).toBeUndefined();
@@ -176,24 +185,75 @@ describe("Even G2 token HTTP boundary", () => {
     expect(JSON.parse(response.body)).toEqual({ token: "single-use" });
   });
 
-  it("answers token preflights without credentialed or broad method access", async () => {
+  it("answers token preflights only for allowlisted origins", async () => {
     vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "test");
+    vi.stubEnv("ALLOWED_ORIGINS", "https://allowed.example");
     vi.resetModules();
 
     const { handler } = await import("../apps/server/_core/index");
     const response = (await handler(
-      apiGatewayEvent({ method: "OPTIONS", origin: "file://" }),
+      apiGatewayEvent({ method: "OPTIONS", origin: "https://allowed.example" }),
       {},
     )) as LambdaResponse;
 
     expect(response.statusCode).toBe(200);
-    expect(response.headers["access-control-allow-origin"]).toBe("*");
+    expect(response.headers["access-control-allow-origin"]).toBe(
+      "https://allowed.example",
+    );
     expect(response.headers["access-control-allow-methods"]).toBe(
       "POST, OPTIONS",
+    );
+    expect(response.headers["access-control-allow-headers"]).toBe(
+      "Accept, Content-Type, Authorization",
     );
     expect(
       response.headers["access-control-allow-credentials"],
     ).toBeUndefined();
+  });
+
+  it("rejects unauthenticated token requests before provider invocation", async () => {
+    vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "test");
+    vi.stubEnv("ALLOWED_ORIGINS", "https://allowed.example");
+    vi.stubEnv("ELEVENLABS_API_KEY", "provider-key");
+    vi.stubEnv("EVEN_G2_REALTIME_TOKEN_SECRET", "token-secret");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+
+    const { handler } = await import("../apps/server/_core/index");
+    const response = (await handler(
+      apiGatewayEvent({ origin: "https://allowed.example" }),
+      {},
+    )) as LambdaResponse;
+
+    expect(response.statusCode).toBe(401);
+    expect(JSON.parse(response.body)).toEqual({ error: "Unauthorized" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("reports an unconfigured token service without invoking the provider", async () => {
+    vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "test");
+    vi.stubEnv("ALLOWED_ORIGINS", "https://allowed.example");
+    vi.stubEnv("ELEVENLABS_API_KEY", "provider-key");
+    vi.stubEnv("EVEN_G2_REALTIME_TOKEN_SECRET", "");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+
+    const { handler } = await import("../apps/server/_core/index");
+    const response = (await handler(
+      apiGatewayEvent({
+        origin: "https://allowed.example",
+        headers: { authorization: "Bearer token-secret" },
+      }),
+      {},
+    )) as LambdaResponse;
+
+    expect(response.statusCode).toBe(503);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Token service is not configured",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("preserves the origin allowlist on other routes", async () => {
@@ -230,6 +290,7 @@ describe("Even G2 token HTTP boundary", () => {
   it("rejects request bodies before provider invocation", async () => {
     vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "test");
     vi.stubEnv("ELEVENLABS_API_KEY", "provider-key");
+    vi.stubEnv("EVEN_G2_REALTIME_TOKEN_SECRET", "token-secret");
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     vi.resetModules();
@@ -242,6 +303,7 @@ describe("Even G2 token HTTP boundary", () => {
         headers: {
           "content-length": "0",
           "content-type": "application/json",
+          authorization: "Bearer token-secret",
         },
       }),
       {},
@@ -257,6 +319,7 @@ describe("Even G2 token HTTP boundary", () => {
   it("rate-limits by the API Gateway source IP, not spoofable headers", async () => {
     vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "test");
     vi.stubEnv("ELEVENLABS_API_KEY", "provider-key");
+    vi.stubEnv("EVEN_G2_REALTIME_TOKEN_SECRET", "token-secret");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ token: "single-use" }), {
         status: 200,
@@ -272,7 +335,10 @@ describe("Even G2 token HTTP boundary", () => {
       response = (await handler(
         apiGatewayEvent({
           sourceIp: "198.51.100.3",
-          headers: { "x-forwarded-for": `203.0.113.${request}` },
+          headers: {
+            "x-forwarded-for": `203.0.113.${request}`,
+            authorization: "Bearer token-secret",
+          },
         }),
         {},
       )) as LambdaResponse;

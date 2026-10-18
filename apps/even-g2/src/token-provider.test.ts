@@ -14,6 +14,7 @@ describe("createRealtimeTokenProvider", () => {
     const token = await createRealtimeTokenProvider(
       "https://api.example.test/",
       fetchImpl,
+      "token-secret",
     )();
 
     expect(token).toBe("single-use");
@@ -22,7 +23,10 @@ describe("createRealtimeTokenProvider", () => {
       {
         method: "POST",
         credentials: "omit",
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+          Authorization: "Bearer token-secret",
+        },
       },
     );
   });
