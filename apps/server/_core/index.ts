@@ -12,6 +12,7 @@ import {
   issueRealtimeToken,
   type RealtimeTokenProvider,
 } from "../realtime-token";
+import { isAuthorizedRealtimeTokenRequest } from "../realtime-token-auth";
 import { isAllowedOrigin } from "./cors";
 
 const realtimeTokenLimiter = new RealtimeTokenRateLimiter();
@@ -44,10 +45,10 @@ function createApp() {
 
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    const isRealtimeTokenRequest =
-      resolveRealtimeTokenProvider(req.path) !== null;
+    const isPublicRealtimeTokenRequest =
+      resolveRealtimeTokenProvider(req.path) === "elevenlabs";
     // Mobile app requests have no origin; web requests must match allowlist
-    if (isRealtimeTokenRequest) {
+    if (isPublicRealtimeTokenRequest) {
       res.header("Access-Control-Allow-Origin", "*");
       res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
       res.header("Access-Control-Allow-Headers", "Accept, Content-Type");
@@ -58,7 +59,7 @@ function createApp() {
         res.header("Access-Control-Allow-Credentials", "true");
       }
     }
-    if (!isRealtimeTokenRequest) {
+    if (!isPublicRealtimeTokenRequest) {
       res.header(
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, DELETE, OPTIONS",
@@ -101,6 +102,14 @@ function createApp() {
     const provider = resolveRealtimeTokenProvider(req.path);
     if (!provider) {
       res.status(404).json({ error: "Not found" });
+      return;
+    }
+
+    if (
+      provider === "openai" &&
+      !isAuthorizedRealtimeTokenRequest(req.headers.authorization)
+    ) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
