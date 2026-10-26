@@ -83,6 +83,7 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     "expo-asset",
+    "expo-sharing",
     "@react-native-community/datetimepicker",
     [
       "expo-audio",
