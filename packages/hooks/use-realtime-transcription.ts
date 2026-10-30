@@ -8,11 +8,11 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Alert } from "react-native";
+import { Alert, AppState } from "react-native";
 import { API_BASE_URL } from "@/packages/lib/api";
-import type { RealtimeClient } from "@/packages/lib/realtime-client";
 import { createRealtimeTranscriptionClient } from "@/packages/lib/realtime-transcription-factory";
 import { requestRealtimeTokenFor } from "@/packages/lib/realtime-token";
+import { RealtimeTranscriptionSession } from "@/packages/lib/realtime-session";
 import { applyPartial, applyCommitted, applyTimestampedCommitted, mergeSegments } from "@/packages/lib/transcript-segments";
 import { createAudioStream, type AudioStreamController, type AudioStreamResult } from "@/packages/platform";
 import type {
@@ -50,10 +50,11 @@ export function useRealtimeTranscription() {
   });
   const [soundLevel, setSoundLevel] = useState<number>(0);
 
-  const clientRef = useRef<RealtimeClient | null>(null);
+  const sessionRef = useRef<RealtimeTranscriptionSession | null>(null);
   const recordingStartTimeRef = useRef<number>(0);
   const currentRecordingIdRef = useRef<string | null>(null);
   const audioStreamRef = useRef<AudioStreamController | null>(null);
+  const appStateRef = useRef(AppState.currentState);
 
   // クリーンアップ
   useEffect(() => {
@@ -61,10 +62,23 @@ export function useRealtimeTranscription() {
       if (audioStreamRef.current) {
         audioStreamRef.current.stop();
       }
-      if (clientRef.current) {
-        clientRef.current.disconnect();
-      }
+      void sessionRef.current?.stop(false);
+      sessionRef.current = null;
     };
+  }, []);
+
+  // Background recording does not keep a dropped WebSocket alive; retry immediately
+  // when the app genuinely returns to the foreground and the socket is closed.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      const wasInactive = appStateRef.current !== "active";
+      appStateRef.current = nextState;
+      if (wasInactive && nextState === "active") {
+        const session = sessionRef.current;
+        if (session && !session.isConnected) session.resume();
+      }
+    });
+    return () => subscription.remove();
   }, []);
 
   /**
@@ -83,9 +97,7 @@ export function useRealtimeTranscription() {
 
       await audioStream.start(
         (base64Audio) => {
-          if (clientRef.current?.isConnected) {
-            clientRef.current.sendAudioChunk(base64Audio, 16000);
-          }
+          sessionRef.current?.sendAudioChunk(base64Audio, 16000);
         },
         (level) => {
           setSoundLevel(level);
@@ -122,6 +134,31 @@ export function useRealtimeTranscription() {
   const callbacksRef = useRef<RealtimeSessionCallbacks | null>(null);
 
   /**
+   * セッションを停止
+   * @returns Native: ExpoPlayAudioStreamが保存した音声ファイル情報, Web: null
+   */
+  const stopSession = useCallback(async (): Promise<AudioStreamResult | null> => {
+    const session = sessionRef.current;
+    // Prevent a retry/token request before the first awaited stream shutdown.
+    session?.cancelReconnects();
+    const streamResult = await stopAudioStreaming();
+
+    if (session) await session.stop(true);
+    if (sessionRef.current === session) sessionRef.current = null;
+
+    setState((prev) => ({
+      ...prev,
+      isActive: false,
+      connectionStatus: "disconnected",
+    }));
+
+    currentRecordingIdRef.current = null;
+    recordingStartTimeRef.current = 0;
+    callbacksRef.current = null;
+    return streamResult;
+  }, [stopAudioStreaming]);
+
+  /**
    * セッションを開始
    *
    * @param recordingId - 録音ID
@@ -133,12 +170,13 @@ export function useRealtimeTranscription() {
     options: RealtimeOptions = {},
     callbacks?: RealtimeSessionCallbacks
   ): Promise<void> => {
-    callbacksRef.current = callbacks || null;
-
     // 既存セッションがある場合は終了
-    if (clientRef.current) {
+    if (sessionRef.current) {
       await stopSession();
     }
+
+    callbacksRef.current = callbacks || null;
+    let session: RealtimeTranscriptionSession | null = null;
 
     try {
       setState((prev) => ({
@@ -151,114 +189,7 @@ export function useRealtimeTranscription() {
 
       currentRecordingIdRef.current = recordingId;
       recordingStartTimeRef.current = 0;
-
       const provider = options.provider ?? "elevenlabs";
-      const token = await requestRealtimeTokenFor(API_BASE_URL, provider);
-
-      // WebSocketクライアント初期化（プロバイダごとの実装を注入）
-      const client = createRealtimeTranscriptionClient(provider);
-      clientRef.current = client;
-
-      // イベントハンドラ設定
-      client.on("session_started", () => {
-        recordingStartTimeRef.current = Date.now();
-        setState((prev) => ({
-          ...prev,
-          connectionStatus: "connected",
-        }));
-      });
-
-      client.on("partial", (data: { text: string; itemId?: string }) => {
-        const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
-
-        setState((prev) => {
-          const { segments, segment } = applyPartial(
-            prev.segments,
-            data.text,
-            timestamp,
-            generateSegmentId,
-            data.itemId,
-          );
-          if (callbacksRef.current?.onPartial) {
-            setTimeout(() => callbacksRef.current?.onPartial?.(segment), 0);
-          }
-          return { ...prev, segments };
-        });
-      });
-
-      client.on("committed", (data: { text: string; itemId?: string }) => {
-        const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
-
-        setState((prev) => {
-          const { segments, segment } = applyCommitted(
-            prev.segments,
-            data.text,
-            timestamp,
-            undefined,
-            generateSegmentId,
-            data.itemId,
-          );
-          if (callbacksRef.current?.onCommitted) {
-            setTimeout(() => callbacksRef.current?.onCommitted?.(segment), 0);
-          }
-          return { ...prev, segments };
-        });
-      });
-
-      client.on("committedWithTimestamps", (data: {
-        text: string;
-        words?: Array<{ text: string; start: number; end: number; speaker_id?: string }>;
-      }) => {
-        const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
-
-        // 話者情報を抽出（words が欠落しているケースがある）
-        const speakerId = data.words?.find((w) => w.speaker_id)?.speaker_id;
-
-        setState((prev) => {
-          const { segments, segment } = applyTimestampedCommitted(
-            prev.segments,
-            data.text,
-            timestamp,
-            speakerId,
-            generateSegmentId,
-          );
-          if (callbacksRef.current?.onCommitted) {
-            setTimeout(() => callbacksRef.current?.onCommitted?.(segment), 0);
-          }
-          return { ...prev, segments };
-        });
-      });
-
-      client.on("error", (error: { code?: string; message: string }) => {
-        console.error("[useRealtimeTranscription] Error:", error);
-
-        setState((prev) => ({
-          ...prev,
-          connectionStatus: "error",
-          error: error.message || "接続エラーが発生しました",
-        }));
-
-        // ElevenLabs は quota_exceeded、OpenAI は insufficient_quota を返す
-        if (
-          error.code === "quota_exceeded" ||
-          error.code === "insufficient_quota"
-        ) {
-          Alert.alert(
-            "クォータ超過",
-            "文字起こしクォータに達しました。録音は継続できますが、リアルタイム文字起こしは無効化されます。"
-          );
-        }
-      });
-
-      client.on("close", () => {
-        setState((prev) => ({
-          ...prev,
-          isActive: false,
-          connectionStatus: "disconnected",
-        }));
-      });
-
-      // WebSocket接続
       const connectionOptions: RealtimeOptions = {
         provider,
         languageCode: options.languageCode || "ja",
@@ -269,13 +200,108 @@ export function useRealtimeTranscription() {
         openai: options.openai,
       };
 
-      await client.connect(token, connectionOptions);
+      session = new RealtimeTranscriptionSession({
+        provider,
+        options: connectionOptions,
+        dependencies: {
+          createClient: createRealtimeTranscriptionClient,
+          requestToken: (selectedProvider) => requestRealtimeTokenFor(API_BASE_URL, selectedProvider),
+        },
+        handlers: {
+          onConnected: () => {
+            if (sessionRef.current !== session) return;
+            if (recordingStartTimeRef.current === 0) recordingStartTimeRef.current = Date.now();
+            setState((prev) => ({ ...prev, isActive: true, connectionStatus: "connected", error: undefined }));
+          },
+          onReconnecting: () => {
+            if (sessionRef.current !== session) return;
+            setState((prev) => ({ ...prev, connectionStatus: "connecting", error: undefined }));
+          },
+          onPartial: (data) => {
+            if (sessionRef.current !== session) return;
+            const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
+            setState((prev) => {
+              const { segments, segment } = applyPartial(prev.segments, data.text, timestamp,
+                generateSegmentId, data.itemId);
+              if (callbacksRef.current?.onPartial) {
+                setTimeout(() => {
+                  if (sessionRef.current === session) callbacksRef.current?.onPartial?.(segment);
+                }, 0);
+              }
+              return { ...prev, segments };
+            });
+          },
+          onCommitted: (data) => {
+            if (sessionRef.current !== session) return;
+            const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
+            setState((prev) => {
+              const { segments, segment } = applyCommitted(prev.segments, data.text, timestamp,
+                undefined, generateSegmentId, data.itemId);
+              if (callbacksRef.current?.onCommitted) {
+                setTimeout(() => {
+                  if (sessionRef.current === session) callbacksRef.current?.onCommitted?.(segment);
+                }, 0);
+              }
+              return { ...prev, segments };
+            });
+          },
+          onCommittedWithTimestamps: (data) => {
+            if (sessionRef.current !== session) return;
+            const timestamp = (Date.now() - recordingStartTimeRef.current) / 1000;
+            const speakerId = data.words?.find((word) => word.speaker_id)?.speaker_id;
+            setState((prev) => {
+              const { segments, segment } = applyTimestampedCommitted(prev.segments, data.text,
+                timestamp, speakerId, generateSegmentId);
+              if (callbacksRef.current?.onCommitted) {
+                setTimeout(() => {
+                  if (sessionRef.current === session) callbacksRef.current?.onCommitted?.(segment);
+                }, 0);
+              }
+              return { ...prev, segments };
+            });
+          },
+          onError: (error) => {
+            if (sessionRef.current !== session) return;
+            console.error("[useRealtimeTranscription] Error:", error);
+            const quotaExceeded = error.code === "quota_exceeded" || error.code === "insufficient_quota";
+            setState((prev) => ({
+              ...prev,
+              ...(quotaExceeded ? { isActive: false } : {}),
+              connectionStatus: "error",
+              error: error.message || "接続エラーが発生しました",
+            }));
+            if (quotaExceeded) {
+              Alert.alert("クォータ超過",
+                "文字起こしクォータに達しました。録音は継続できますが、リアルタイム文字起こしは無効化されます。");
+            }
+          },
+          onReconnectExhausted: (error) => {
+            if (sessionRef.current !== session) return;
+            setState((prev) => ({
+              ...prev,
+              isActive: false,
+              connectionStatus: "error",
+              error: error instanceof Error ? error.message : "リアルタイム文字起こしに再接続できませんでした",
+            }));
+          },
+        },
+      });
+      sessionRef.current = session;
 
-      if (!options.skipAudioStreaming) {
-        await startAudioStreaming();
-      }
+      await session.start();
+      if (sessionRef.current !== session) return;
+      if (session.isTerminal) throw new Error("Realtime transcription stopped by the provider");
+      if (!session.isActive) return;
+
+      // Reconnects reuse the existing audio stream; only the initial session reaches this.
+      if (!options.skipAudioStreaming) await startAudioStreaming();
     } catch (error) {
       console.error("[useRealtimeTranscription] Failed to start session:", error);
+      if (session && sessionRef.current !== session) {
+        await session.stop(false);
+        throw error;
+      }
+      if (session && !session.isActive && !session.isTerminal) return;
 
       setState((prev) => ({
         ...prev,
@@ -283,44 +309,11 @@ export function useRealtimeTranscription() {
         connectionStatus: "error",
         error: error instanceof Error ? error.message : "セッション開始に失敗しました",
       }));
-
-      if (clientRef.current) {
-        clientRef.current.disconnect();
-        clientRef.current = null;
-      }
-
+      await session?.stop(false);
+      if (sessionRef.current === session) sessionRef.current = null;
       throw error;
     }
-  }, [startAudioStreaming]);
-
-  /**
-   * セッションを停止
-   * @returns Native: ExpoPlayAudioStreamが保存した音声ファイル情報, Web: null
-   */
-  const stopSession = useCallback(async (): Promise<AudioStreamResult | null> => {
-    const streamResult = await stopAudioStreaming();
-
-    if (clientRef.current) {
-      // VADの無音待ち前に停止した場合、最後の発話が未確定のまま残る。
-      // 切断前にフラッシュして確定結果を取りこぼさない。
-      try {
-        await clientRef.current.finalize?.();
-      } catch {
-        // フラッシュ失敗はセッション停止を妨げない
-      }
-      clientRef.current.disconnect();
-      clientRef.current = null;
-    }
-
-    setState((prev) => ({
-      ...prev,
-      isActive: false,
-      connectionStatus: "disconnected",
-    }));
-
-    currentRecordingIdRef.current = null;
-    return streamResult;
-  }, [stopAudioStreaming]);
+  }, [startAudioStreaming, stopSession]);
 
   /**
    * 音声チャンクを送信（手動送信用、通常は自動ストリーミングを使用）
@@ -329,12 +322,12 @@ export function useRealtimeTranscription() {
    * @param sampleRate - サンプルレート（Hz）
    */
   const sendAudioChunk = useCallback((audioBase64: string, sampleRate: number = 16000): void => {
-    if (!clientRef.current || !clientRef.current.isConnected) {
+    if (!sessionRef.current?.isConnected) {
       console.warn("[useRealtimeTranscription] Client not connected, cannot send audio chunk");
       return;
     }
 
-    clientRef.current.sendAudioChunk(audioBase64, sampleRate);
+    sessionRef.current.sendAudioChunk(audioBase64, sampleRate);
   }, []);
 
   /**
