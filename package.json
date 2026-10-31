@@ -83,7 +83,7 @@
     "react-native-web": "~0.21.2",
     "serverless-http": "^4.0.0",
     "superjson": "^2.2.6",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@evenrealities/evenhub-cli": "0.1.14",
