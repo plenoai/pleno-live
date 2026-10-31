@@ -77,7 +77,22 @@ jobs:
 
       - name: Configure Android build
         run: |
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          # self-hosted runnerでANDROID_SDK_ROOTが未設定だとsdk.dirが空になりGradle設定段階で失敗するため、
+          # ANDROID_HOMEや既定パスへフォールバックし、見つからなければ明示的に失敗させる
+          SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$SDK_DIR" ]; then
+            for candidate in "$HOME/Android/Sdk" "$HOME/android-sdk" /opt/android-sdk /usr/lib/android-sdk; do
+              if [ -d "$candidate" ]; then SDK_DIR="$candidate"; break; fi
+            done
+          fi
+          if [ -z "$SDK_DIR" ] || [ ! -d "$SDK_DIR" ]; then
+            echo "::error::Android SDK not configured on runner: set ANDROID_SDK_ROOT or ANDROID_HOME to an existing SDK directory (got '${SDK_DIR}')"
+            exit 1
+          fi
+          echo "Using Android SDK at $SDK_DIR"
+          echo "ANDROID_HOME=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "sdk.dir=$SDK_DIR" > android/local.properties
           # arm64-v8aのみ・R8 minify有効・gif/webp無効でサイズ最小化
           # configuration-cache はReact Nativeのnodeプロセス呼び出しと非互換のため無効
           # prebuild生成のgradle.propertiesは末尾改行なし。直結すると最終行のプロパティ値が壊れる
