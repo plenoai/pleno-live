@@ -73,7 +73,7 @@ jobs:
           jq -r '.build.production.env | to_entries[] | "\(.key)=\(.value | gsub("\\n"; "") | gsub("\\r"; ""))"' eas.json | envsubst >> "$GITHUB_ENV"
 
       - name: Expo prebuild
-        run: npx expo prebuild --platform android --clean
+        run: npx expo prebuild --platform android --clean --template expo-template-bare-minimum@56.0.38
 
       - name: Configure Android build
         run: |
@@ -91,7 +91,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
-          gradle-home-cache-cleanup: true
+          cache-cleanup: always
 
       - name: Build release APK
         env:
