@@ -111,7 +111,7 @@
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vite": "^6.0.0",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.5"
   },
   "packageManager": "pnpm@9.12.0",
   "pnpm": {
