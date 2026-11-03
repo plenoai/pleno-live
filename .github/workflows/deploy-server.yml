@@ -32,7 +32,7 @@ env:
 jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, linux, arm64, hikae-long]
+    runs-on: hikae-4vcpu-ubuntu-2404-arm
     # amd64 image is built under QEMU on the arm64 runner; a cold pnpm cache needs >20m (2026-10-31 cancels).
     timeout-minutes: 50
     steps:
