@@ -19,7 +19,7 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository
-    runs-on: [self-hosted, linux, arm64, hikae-flash]
+    runs-on: blacksmith-2vcpu-ubuntu-2404-arm
     outputs:
       eligible: ${{ steps.tag.outputs.release }}
       tag: ${{ steps.version.outputs.tag }}
