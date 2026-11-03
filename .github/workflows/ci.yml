@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   lint-and-test:
-    runs-on: [self-hosted, linux, arm64, hikae-flash]
+    runs-on: blacksmith-2vcpu-ubuntu-2404-arm
     timeout-minutes: 10
 
     steps:
