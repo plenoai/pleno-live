@@ -17,7 +17,7 @@ class DeploymentTests(unittest.TestCase):
         def aws(*args):
             calls.append(args)
             if args[0] == "get-function":
-                return previous
+                return previous + "\tx86_64"
             if update_failure and target in args:
                 raise subprocess.CalledProcessError(1, ["aws", "lambda", "update-function-code"])
             return ""
@@ -37,19 +37,28 @@ class DeploymentTests(unittest.TestCase):
                     deploy.main()
             else:
                 deploy.main()
-        return [c[c.index("--image-uri") + 1] for c in calls if c[0] == "update-function-code"], previous, target
+        return [(c[c.index("--image-uri") + 1], c[c.index("--architectures") + 1])
+                for c in calls if c[0] == "update-function-code"], previous, target
 
     def test_exact_revision_succeeds_without_rollback(self):
         images, previous, target = self.exercise("c" * 40)
-        self.assertEqual(images, [target])
+        self.assertEqual(images, [(target, "arm64")])
 
     def test_http_200_from_an_old_revision_restores_previous_image_and_fails(self):
         images, previous, target = self.exercise("old-release")
-        self.assertEqual(images, [target, previous])
+        self.assertEqual(images, [(target, "arm64"), (previous, "x86_64")])
 
     def test_partial_update_failure_restores_previous_image_and_fails(self):
         images, previous, target = self.exercise("old-release", update_failure=True)
-        self.assertEqual(images, [target, previous])
+        self.assertEqual(images, [(target, "arm64"), (previous, "x86_64")])
+
+    def test_unknown_previous_architecture_is_rejected_before_any_update(self):
+        image = "951872725222.dkr.ecr.ap-northeast-1.amazonaws.com/pleno-live-api-prod@sha256:"
+        with patch.dict(os.environ, GITHUB_SHA="c" * 40, IMAGE_URI=image + "b" * 64, LAMBDA_FUNCTION="f"), \
+                patch.object(deploy, "aws", return_value=image + "a" * 64 + "\tNone") as aws:
+            with self.assertRaises(ValueError):
+                deploy.main()
+            self.assertEqual([c.args[0] for c in aws.call_args_list], ["get-function"])
 
     def test_mutable_image_tag_is_rejected_before_any_aws_change(self):
         with patch.dict(os.environ, GITHUB_SHA="c" * 40, IMAGE_URI="repository:latest"), \
