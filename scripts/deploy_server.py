@@ -7,6 +7,8 @@ import time
 from urllib.request import Request, urlopen
 
 HEALTH_URL = "https://live.plenoai.com/api/health"
+# The image is built natively on the arm64 runners; the architecture ships with the image.
+ARCHITECTURE = "arm64"
 
 
 def aws(*args):
@@ -14,9 +16,9 @@ def aws(*args):
                           stdout=subprocess.PIPE).stdout.strip()
 
 
-def update(image):
+def update(image, architecture):
     aws("update-function-code", "--function-name", os.environ["LAMBDA_FUNCTION"],
-        "--image-uri", image, "--query", "LastUpdateStatus", "--output", "text")
+        "--image-uri", image, "--architectures", architecture, "--query", "LastUpdateStatus", "--output", "text")
     aws("wait", "function-updated-v2", "--function-name", os.environ["LAMBDA_FUNCTION"])
 
 
@@ -40,15 +42,17 @@ def main():
     if not re.fullmatch(r"[0-9a-f]{40}", version) or not re.fullmatch(
             r"951872725222\.dkr\.ecr\.ap-northeast-1\.amazonaws\.com/pleno-live-api-prod@sha256:[0-9a-f]{64}", image):
         raise ValueError("Expected a full commit SHA and the deployment repository's image digest")
-    previous = aws("get-function", "--function-name", os.environ["LAMBDA_FUNCTION"],
-                   "--query", "Code.ResolvedImageUri", "--output", "text")
-    if "@sha256:" not in previous:
-        raise ValueError("The preceding Lambda image must be available for rollback")
+    previous, previous_architecture = (aws(
+        "get-function", "--function-name", os.environ["LAMBDA_FUNCTION"],
+        "--query", "[Code.ResolvedImageUri, Configuration.Architectures[0]]", "--output", "text",
+    ).split() + ["", ""])[:2]
+    if "@sha256:" not in previous or previous_architecture not in ("x86_64", "arm64"):
+        raise ValueError("The preceding Lambda image and architecture must be available for rollback")
     try:
-        update(image)
+        update(image, ARCHITECTURE)
         verify(version)
     except Exception:
-        update(previous)
+        update(previous, previous_architecture)
         verify()
         print("Previous Lambda image restored and public health confirmed.", flush=True)
         raise
