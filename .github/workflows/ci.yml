@@ -32,8 +32,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 非ブロッキング: npm に新しい Expo パッチ版が出ただけで CI を落とさない。
       - name: Check Expo dependency compatibility
-        run: pnpm exec expo install --check
+        continue-on-error: true
+        run: |
+          if ! pnpm exec expo install --check; then
+            echo "::warning title=Expo dependency check::expo install --check reported outdated packages. Run 'pnpm exec expo install --fix' to update."
+            echo "### ⚠️ expo install --check reported outdated packages" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Check iOS autolinking compatibility
         run: |
