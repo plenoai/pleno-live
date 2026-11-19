@@ -165,6 +165,8 @@ export class RealtimeTranscriptionSession {
       if (!current() || this.stopRequested) return;
       this.established = true;
       this.connecting = false;
+      // A healthy session earns a fresh retry budget for the next outage.
+      this.retryAttempts = 0;
       this.clearRetryTimer();
       this.config.handlers?.onConnected?.();
     });

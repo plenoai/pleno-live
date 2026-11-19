@@ -169,6 +169,28 @@ describe("RealtimeTranscriptionSession reconnect", () => {
     await liveSession.stop(false);
   });
 
+  it("resets the retry budget after each successful reconnect", async () => {
+    vi.useFakeTimers();
+    const { session, clients, onReconnectExhausted } = createSession();
+    const starting = session.start();
+    await flush();
+    clients[0].acknowledge();
+    await starting;
+
+    for (let drop = 1; drop <= MAX_REALTIME_RECONNECT_ATTEMPTS + 2; drop++) {
+      clients[drop - 1].closeRemotely();
+      await vi.advanceTimersByTimeAsync(REALTIME_RECONNECT_DELAYS_MS[0]);
+      await flush();
+      expect(clients).toHaveLength(drop + 1);
+      clients[drop].acknowledge();
+      await flush();
+    }
+
+    expect(onReconnectExhausted).not.toHaveBeenCalled();
+    expect(session.isConnected).toBe(true);
+    await session.stop(false);
+  });
+
   it("expedites a pending reconnect when the session resumes", async () => {
     vi.useFakeTimers();
     const { session, clients, tokenCount } = createSession();
